@@ -7,21 +7,29 @@
 
 #include <stddef.h>
 
-#define list_append(list, value)                   \
-  do {                                             \
-    typeof((value)) lvalue = (value);              \
-    ASSERT_POINTER(list, lvalue)                   \
-    if (!(list)) {                                 \
-      typeof(list) *p = &(list);                   \
-      _list_init((void **)p, sizeof(lvalue));      \
-    }                                              \
-                                                   \
-    _list_append((list), &lvalue, sizeof(lvalue)); \
+#define list_append(list, value)                       \
+  do {                                                 \
+    typeof((value)) lvalue = (value);                  \
+    ASSERT_POINTER(list, lvalue)                       \
+    typeof(list) *p = &(list);                         \
+    _list_append((void **)p, &lvalue, sizeof(lvalue)); \
   } while (0)
 
 #define list_size(list) _list_size((list))
 #define list_capacity(list) _list_capacity((list))
-#define list_free(list) _list_free((list))
+#define list_free(list)        \
+  do {                         \
+    typeof(list) *p = &(list); \
+    _list_free((void **)p);    \
+  } while (0)
+
+#define list_grow(list, n)                    \
+  do {                                        \
+    typeof(list) *p = &(list);                \
+    _list_grow((void **)p, n, sizeof(*list)); \
+  } while (0)
+
+#define list_isempty(list) _list_size((list)) == 0
 
 size_t _list_capacity(void *lst);
 size_t _list_size(void *lst);
@@ -29,8 +37,10 @@ size_t _list_size(void *lst);
 void _list_set_capacity(void *lst, size_t capacity);
 void _list_set_size(void *lst, size_t size);
 
+void _list_grow(void **lp, size_t n, size_t ds);
+
 void _list_init(void **lp, size_t ds);
-void _list_append(void *lst, void *data, size_t ds);
-void _list_free(void *lp);
+void _list_append(void **lp, void *data, size_t ds);
+void _list_free(void **lp);
 
 #endif
