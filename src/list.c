@@ -31,25 +31,36 @@ void _list_init(void **lp, size_t ds) {
   _list_set_size(*lp, 0);
 }
 
-void _list_grow(void **lp, size_t n, size_t ds) {
-  void *ptr = realloc((size_t *)*lp - 2, n * ds + 2 * sizeof(size_t));
-  *lp = (size_t *)ptr + 2;
-  _list_set_capacity(*lp, n);
+void *_list_grow(void *lst, size_t n, size_t ds) {
+  void *ptr;
+  size_t cap = n * ds + 2 * sizeof(size_t);
+  if (!lst)
+    ptr = malloc(cap);
+  else
+    ptr = realloc((size_t *)lst - 2, cap);
+
+  void *new_lst = (size_t *)ptr + 2;
+  _list_set_capacity(new_lst, n);
+  return new_lst;
 }
 
 void _list_append(void **lp, void *data, size_t ds) {
-  if (!_list_capacity(*lp)) {
-    _list_init(lp, ds);
-  } else if (list_capacity(*lp) < list_size(*lp) + 1) {
-    _list_grow(lp, _list_size(*lp) * 2, ds);
+  void *lst = *lp;
+  size_t cap = _list_capacity(lst);
+  size_t size = _list_size(lst);
+
+  if (size >= cap) {
+    size_t new_cap = cap == 0 ? EDS_LIST_INITIAL_CAPACITY : cap * 2;
+    lst = _list_grow(lst, new_cap, ds);
+    *lp = lst;
   }
 
-  void *lst = *lp;
-  memcpy(lst + ds * _list_size(lst), data, ds);
-  _list_set_size(lst, _list_size(lst) + 1);
+  char *new_elem_ptr = (char *)lst + ds * size;
+  memcpy(new_elem_ptr, data, ds);
+  _list_set_size(lst, size + 1);
 }
 
-void _list_free(void **lp) {
+void _list_destroy(void **lp) {
   free((size_t *)*lp - 2);
   *lp = NULL;
 }
