@@ -3,44 +3,47 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct list_header *_list_header(void *lst) {
+  struct list_header *header = (struct list_header *)lst - 1;
+  return header;
+}
+
 size_t _list_capacity(void *lst) {
   if (!lst)
     return 0;
 
-  return ((size_t *)lst)[-1];
+  return _list_header(lst)->capacity;
 }
 
 size_t _list_size(void *lst) {
   if (!lst)
     return 0;
 
-  return ((size_t *)lst)[-2];
+  return _list_header(lst)->size;
 }
 
 void _list_set_capacity(void *lst, size_t capacity) {
-  ((size_t *)lst)[-1] = capacity;
+  _list_header(lst)->capacity = capacity;
 }
 void _list_set_size(void *lst, size_t size) {
-  ((size_t *)lst)[-2] = size;
-}
-
-void _list_init(void **lp, size_t ds) {
-  size_t initial_cap = 2 * sizeof(size_t) + ds * EDS_LIST_INITIAL_CAPACITY;
-  *lp = (size_t *)malloc(initial_cap) + 2;
-  _list_set_capacity(*lp, EDS_LIST_INITIAL_CAPACITY);
-  _list_set_size(*lp, 0);
+  _list_header(lst)->size = size;
 }
 
 void *_list_grow(void *lst, size_t n, size_t ds) {
   void *ptr;
-  size_t cap = n * ds + 2 * sizeof(size_t);
-  if (!lst)
-    ptr = malloc(cap);
-  else
-    ptr = realloc((size_t *)lst - 2, cap);
+  size_t alloc = n * ds + sizeof(struct list_header);
+  if (!lst) {
+    ptr = malloc(alloc);
+    struct list_header *header = (struct list_header *)ptr;
+    header->size = 0;
+    header->capacity = n;
+  } else {
+    ptr = realloc(_list_header(lst), alloc);
+    struct list_header *header = (struct list_header *)ptr;
+    header->capacity = n;
+  }
 
-  void *new_lst = (size_t *)ptr + 2;
-  _list_set_capacity(new_lst, n);
+  void *new_lst = (struct list_header *)ptr + 1;
   return new_lst;
 }
 
@@ -61,6 +64,35 @@ void _list_append(void **lp, void *data, size_t ds) {
 }
 
 void _list_destroy(void **lp) {
-  free((size_t *)*lp - 2);
+  void *lst = *lp;
+  if (!lst)
+    return;
+
+  free(_list_header(lst));
   *lp = NULL;
+}
+
+void _list_destroy_complex(void **lp, size_t ds, void (*free_func)(void *)) {
+  void *lst = *lp;
+  if (!lst)
+    return;
+
+  size_t size = _list_size(lst);
+
+  char *lst_char = (char *)lst;
+  for (size_t i = 0; i < size; i++) {
+    void *item = *(void **)(lst_char + i * ds);
+    if (free_func)
+      free_func(item);
+  }
+
+  _list_destroy(lp);
+}
+
+void _list_reserve(void **lp, size_t n, size_t ds) {
+  if (!n || !ds)
+    *lp = NULL;
+
+  void *lst = *lp;
+  *lp = _list_grow(lst, n, ds);
 }
