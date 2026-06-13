@@ -29,6 +29,16 @@ void _list_set_size(void *lst, size_t size) {
   _list_header(lst)->size = size;
 }
 
+void _list_set_free_fn(void **lp, void (*free_fn)(void *), size_t ds) {
+  void *lst = *lp;
+  if (!lst) {
+    lst = _list_grow(lst, EDS_LIST_INITIAL_CAPACITY, ds);
+    *lp = lst;
+  }
+
+  _list_header(lst)->free_fn = free_fn;
+}
+
 void *_list_grow(void *lst, size_t n, size_t ds) {
   void *ptr;
   size_t alloc = n * ds + sizeof(struct list_header);
@@ -37,6 +47,7 @@ void *_list_grow(void *lst, size_t n, size_t ds) {
     struct list_header *header = (struct list_header *)ptr;
     header->size = 0;
     header->capacity = n;
+    header->free_fn = NULL;
   } else {
     ptr = realloc(_list_header(lst), alloc);
     struct list_header *header = (struct list_header *)ptr;
@@ -63,30 +74,25 @@ void _list_append(void **lp, void *data, size_t ds) {
   _list_set_size(lst, size + 1);
 }
 
-void _list_destroy(void **lp) {
+void _list_destroy(void **lp, size_t ds) {
   void *lst = *lp;
   if (!lst)
     return;
 
-  free(_list_header(lst));
-  *lp = NULL;
-}
+  struct list_header *header = _list_header(lst);
+  size_t size = header->size;
+  void (*free_fn)(void *) = header->free_fn;
 
-void _list_destroy_complex(void **lp, size_t ds, void (*free_func)(void *)) {
-  void *lst = *lp;
-  if (!lst)
-    return;
-
-  size_t size = _list_size(lst);
-
-  char *lst_char = (char *)lst;
-  for (size_t i = 0; i < size; i++) {
-    void *item = *(void **)(lst_char + i * ds);
-    if (free_func)
-      free_func(item);
+  if (free_fn) {
+    char *lst_char = (char *)lst;
+    for (size_t i = 0; i < size; i++) {
+      void *item = *(void **)(lst_char + i * ds);
+      free_fn(item);
+    }
   }
 
-  _list_destroy(lp);
+  free(header);
+  *lp = NULL;
 }
 
 void _list_reserve(void **lp, size_t n, size_t ds) {
@@ -95,4 +101,33 @@ void _list_reserve(void **lp, size_t n, size_t ds) {
 
   void *lst = *lp;
   *lp = _list_grow(lst, n, ds);
+}
+
+void _list_trim(void **lp, size_t ds) {
+  void *lst = *lp;
+  if (!lst)
+    return;
+
+  if (_list_size(lst) == 0) {
+    _list_destroy(lp, ds);
+    return;
+  }
+
+  *lp = _list_grow(lst, _list_size(lst), ds);
+}
+
+void _list_clear(void *lst, size_t ds) {
+  if (!lst)
+    return;
+
+  struct list_header *header = _list_header(lst);
+  if (header->free_fn) {
+    char *lst_char = (char *)lst;
+    for (size_t i = 0; i < _list_size(lst); i++) {
+      void *item = *(void **)(lst_char + i * ds);
+      header->free_fn(item);
+    }
+  }
+
+  header->size = 0;
 }

@@ -30,12 +30,12 @@
 #define list_size(list) _list_size((list))
 #define list_capacity(list) _list_capacity((list))
 #define list_destroy(list) \
-  _list_destroy((void **)&(list));
+  _list_destroy((void **)&(list), sizeof(typeof(*list)))
+
+#define list_set_free_fn(list, free_fn) \
+  _list_set_free_fn((void **)&(list), free_fn, sizeof(typeof(*list)))
 
 #define list_isempty(list) _list_size((list)) == 0
-
-#define list_destroy_complex(list, free_func) \
-  _list_destroy_complex((void **)&(list), sizeof(typeof(*list)), free_func);
 
 #define list_foreach(list, item)                     \
   for (size_t EDS_ITERATOR = 0, EDS_KEEP = 1;        \
@@ -44,11 +44,18 @@
     for (typeof(*(list)) item = (list)[EDS_ITERATOR]; EDS_KEEP; EDS_KEEP = !EDS_KEEP)
 
 #define list_reserve(list, capacity) \
-  _list_reserve((void **)&(list), capacity, sizeof(typeof(*list)));
+  _list_reserve((void **)&(list), capacity, sizeof(typeof(*list)))
+
+#define list_trim(list) \
+  _list_trim((void **)&(list), sizeof(typeof(*list)))
+
+#define list_clear(list) \
+  _list_clear((list), sizeof(typeof(*list)))
 
 struct list_header {
   size_t size;
   size_t capacity;
+  void (*free_fn)(void *); // Function to free complex data types.
 };
 
 struct list_header *_list_header(void *lst);
@@ -57,13 +64,16 @@ size_t _list_size(void *lst);
 
 void _list_set_capacity(void *lst, size_t capacity);
 void _list_set_size(void *lst, size_t size);
+void _list_set_free_fn(void **lp, void (*free_fn)(void *), size_t ds);
 
 void *_list_grow(void *lst, size_t n, size_t ds);
 
 void _list_reserve(void **lp, size_t n, size_t ds);
 
 void _list_append(void **lp, void *data, size_t ds);
-void _list_destroy(void **lp);
-void _list_destroy_complex(void **lp, size_t ds, void (*free_func)(void *));
+void _list_destroy(void **lp, size_t ds);
+
+void _list_trim(void **lp, size_t ds);
+void _list_clear(void *lst, size_t ds);
 
 #endif
