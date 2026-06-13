@@ -18,6 +18,8 @@
 #define ASSERT_FREE_FUNC(a) static_assert(IS_FREE_FUNC((a)), "Error: Function cannot be used as a free function. Signature mismatch")
 #include <stddef.h>
 
+#define elem_size(list) sizeof(typeof(*(list)))
+
 #define list_append(list, value)                             \
   do {                                                       \
     ASSERT_DYNAMIC_ARRAY(list);                              \
@@ -34,6 +36,8 @@
 
 #define list_set_free_fn(list, free_fn) \
   _list_set_free_fn((void **)&(list), free_fn, sizeof(typeof(*list)))
+
+#define list_free_fn(list, item) _list_free_item(list, item);
 
 #define list_isempty(list) _list_size((list)) == 0
 
@@ -61,6 +65,12 @@
     _list_insert((void **)&(list), i, &lvalue, sizeof(lvalue)); \
   } while (0)
 
+#define list_pop(list, i, target) \
+  _list_pop((list), i, elem_size(list), (target))
+
+#define list_remove(list, i) \
+  _list_remove((list), i, sizeof(typeof(*list)));
+
 struct list_header {
   size_t size;
   size_t capacity;
@@ -70,6 +80,8 @@ struct list_header {
 struct list_header *_list_header(void *lst);
 size_t _list_capacity(void *lst);
 size_t _list_size(void *lst);
+void (*_list_free_fn(void *lst))(void *);
+void _list_free_item(void *lst, void *item);
 
 void _list_set_capacity(void *lst, size_t capacity);
 void _list_set_size(void *lst, size_t size);
@@ -86,5 +98,7 @@ void _list_trim(void **lp, size_t ds);
 void _list_clear(void *lst, size_t ds);
 
 void _list_insert(void **lp, size_t i, void *data, size_t ds);
+void _list_remove(void *lst, size_t i, size_t ds);
+void _list_pop(void *lst, size_t i, size_t ds, void *out);
 
 #endif

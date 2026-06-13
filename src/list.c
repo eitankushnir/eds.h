@@ -22,6 +22,19 @@ size_t _list_size(void *lst) {
   return _list_header(lst)->size;
 }
 
+void (*_list_free_fn(void *lst))(void *) {
+  if (!lst)
+    return NULL;
+
+  return _list_header(lst)->free_fn;
+}
+
+void _list_free_item(void *lst, void *item) {
+  void (*free_fn)(void *) = _list_free_fn(lst);
+  if (free_fn)
+    free_fn(item);
+}
+
 void _list_set_capacity(void *lst, size_t capacity) {
   _list_header(lst)->capacity = capacity;
 }
@@ -151,4 +164,33 @@ void _list_insert(void **lp, size_t i, void *data, size_t ds) {
   char *new_elem_ptr = lst_char + ds * i;
   memcpy(new_elem_ptr, data, ds);
   _list_set_size(lst, size + 1);
+}
+
+void _list_remove(void *lst, size_t i, size_t ds) {
+  size_t size = _list_size(lst);
+
+  char *lst_char = (char *)lst;
+  struct list_header *header = _list_header(lst);
+  if (header->free_fn) {
+    free(*(void **)(lst_char + ds * i));
+  }
+
+  for (size_t j = i; j < size - 1; j++) {
+    memcpy(lst_char + ds * j, lst_char + ds * (j + 1), ds);
+  }
+
+  _list_set_size(lst, size - 1);
+}
+
+void _list_pop(void *lst, size_t i, size_t ds, void *out) {
+  size_t size = _list_size(lst);
+
+  char *lst_char = (char *)lst;
+  memcpy(out, lst_char + ds * i, ds);
+
+  for (size_t j = i; j < size - 1; j++) {
+    memcpy(lst_char + ds * j, lst_char + ds * (j + 1), ds);
+  }
+
+  _list_set_size(lst, size - 1);
 }
