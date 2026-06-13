@@ -131,3 +131,24 @@ void _list_clear(void *lst, size_t ds) {
 
   header->size = 0;
 }
+
+void _list_insert(void **lp, size_t i, void *data, size_t ds) {
+  void *lst = *lp;
+  size_t cap = _list_capacity(lst);
+  size_t size = _list_size(lst);
+
+  if (size >= cap) {
+    size_t new_cap = cap == 0 ? EDS_LIST_INITIAL_CAPACITY : cap * 2;
+    lst = _list_grow(lst, new_cap, ds);
+    *lp = lst;
+  }
+
+  char *lst_char = (char *)lst;
+  for (size_t j = size; j > i; j--) {
+    memcpy(lst_char + ds * j, lst_char + ds * (j - 1), ds);
+  }
+
+  char *new_elem_ptr = lst_char + ds * i;
+  memcpy(new_elem_ptr, data, ds);
+  _list_set_size(lst, size + 1);
+}

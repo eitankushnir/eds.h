@@ -52,6 +52,15 @@
 #define list_clear(list) \
   _list_clear((list), sizeof(typeof(*list)))
 
+#define list_insert(list, i, value)                             \
+  do {                                                          \
+    ASSERT_DYNAMIC_ARRAY(list);                                 \
+    typeof_unqual((value)) lvalue = (value);                    \
+    typeof_unqual(*(list)) type_check;                          \
+    ASSERT_SAME_TYPE(type_check, lvalue);                       \
+    _list_insert((void **)&(list), i, &lvalue, sizeof(lvalue)); \
+  } while (0)
+
 struct list_header {
   size_t size;
   size_t capacity;
@@ -75,5 +84,7 @@ void _list_destroy(void **lp, size_t ds);
 
 void _list_trim(void **lp, size_t ds);
 void _list_clear(void *lst, size_t ds);
+
+void _list_insert(void **lp, size_t i, void *data, size_t ds);
 
 #endif
