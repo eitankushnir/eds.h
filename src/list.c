@@ -194,3 +194,17 @@ void _list_pop(void *lst, size_t i, size_t ds, void *out) {
 
   _list_set_size(lst, size - 1);
 }
+
+void *_list_copy(void *lst, size_t ds) {
+  if (!lst)
+    return NULL;
+
+  struct list_header *header = _list_header(lst);
+  size_t total_alloc = header->capacity * ds + sizeof(struct list_header);
+  void *copy = malloc(total_alloc);
+  memcpy(copy, header, total_alloc);
+
+  struct list_header *copy_header = copy;
+  copy_header->free_fn = NULL;
+  return (void *)(copy_header + 1);
+}

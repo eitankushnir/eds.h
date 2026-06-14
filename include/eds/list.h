@@ -71,6 +71,12 @@
 #define list_remove(list, i) \
   _list_remove((list), i, sizeof(typeof(*list)));
 
+#define list_last(list) \
+  (list)[_list_size((list)) - 1]
+
+#define list_copy(list) \
+  _list_copy(list, elem_size(list))
+
 struct list_header {
   size_t size;
   size_t capacity;
@@ -100,5 +106,7 @@ void _list_clear(void *lst, size_t ds);
 void _list_insert(void **lp, size_t i, void *data, size_t ds);
 void _list_remove(void *lst, size_t i, size_t ds);
 void _list_pop(void *lst, size_t i, size_t ds, void *out);
+
+void *_list_copy(void *lst, size_t ds);
 
 #endif
