@@ -19,7 +19,7 @@ typedef struct list list_t;
 
 #define list_assert_type(list, type) _list_assert_type(list, #type);
 
-#define list_at_as(list, index, type) (*(type *)list_at((list), (index)))
+#define list_get_as(list, index, type) (*(type *)list_at((list), (index)))
 #define list_set(list, index, data)      \
   do {                                   \
     typeof((data)) lvalue = data;        \
