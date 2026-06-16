@@ -1,5 +1,6 @@
 #ifndef EDS__H
 #define EDS__H
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -198,11 +199,11 @@ void list_remove(list_t *list, size_t index) {
     list->free_fn(item_to_remove);
 
   size_t item_to_shift = list->size - index - 1;
-  if (!item_to_shift)
-    return;
+  if (item_to_shift) {
+    size_t bytes_to_shift = item_to_shift * list->data_size;
+    memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
+  }
 
-  size_t bytes_to_shift = item_to_shift * list->data_size;
-  memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
   list->size--;
 }
 
@@ -214,11 +215,11 @@ void list_pop(list_t *list, size_t index, void *out_target) {
   memcpy(out_target, item_to_remove, list->data_size);
 
   size_t item_to_shift = list->size - index - 1;
-  if (!item_to_shift)
-    return;
+  if (item_to_shift) {
+    size_t bytes_to_shift = item_to_shift * list->data_size;
+    memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
+  }
 
-  size_t bytes_to_shift = item_to_shift * list->data_size;
-  memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
   list->size--;
 }
 
