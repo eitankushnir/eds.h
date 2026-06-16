@@ -38,9 +38,15 @@ typedef struct list list_t;
     _list_insert((list), index, &lvalue); \
   } while (0)
 
+#define list_clear(list) list_set_size(list, 0)
+#define list_trim(list) list_set_capacity(list, list_size(list))
+
 size_t list_size(list_t *list);
 size_t list_capacity(list_t *list);
 bool list_is_empty(list_t *list);
+
+void list_set_size(list_t *list, size_t size);
+void list_set_capacity(list_t *list, size_t capacity);
 
 void *list_at(list_t *list, size_t index);
 void _list_set(list_t *list, size_t index, void *data);
@@ -232,6 +238,45 @@ void _list_insert(list_t *list, size_t index, void *data) {
   memmove((char *)list->data + (index + 1) * list->data_size, (char *)list->data + list->data_size * index, bytes_to_shift);
   memcpy((char *)list->data + index * list->data_size, data, list->data_size);
   list->size++;
+}
+
+void list_set_size(list_t *list, size_t size) {
+  if (size > list->size)
+    eds_error("Cannot use list_set_size with size %zu which is larger than list size %zu. \nTo extend the list use list_set_capacity.", size, list->size);
+
+  if (!list->free_fn) {
+    list->size = size;
+    return;
+  }
+
+  for (size_t i = size; i < list->size; i++) {
+    void *item_to_free = (char *)list->data + i * list->data_size;
+    list->free_fn(item_to_free);
+  }
+
+  list->size = size;
+}
+
+void list_set_capacity(list_t *list, size_t capacity) {
+  if (capacity == 0) {
+    free(list->data);
+    list->data = NULL;
+    list->capacity = 0;
+    return;
+  }
+
+  if (capacity == list->capacity)
+    return;
+
+  if (capacity < list->size && list->free_fn) {
+    for (size_t i = capacity; i < list->size; i++) {
+      list->free_fn((char *)list->data + i * list->data_size);
+    }
+    list->size = capacity;
+  }
+
+  list->data = eds_realloc(list->data, capacity * list->data_size);
+  list->capacity = capacity;
 }
 
 #endif // EDS_NO_LIST
