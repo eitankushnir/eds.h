@@ -12,7 +12,7 @@
 typedef struct list list_t;
 
 #define list(type) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof(type), NULL, #type)
-#define list_with_capcity(type, capacity) _list_create((capacity), sizeof(type), NULL, #type)
+#define list_with_capacity(type, capacity) _list_create((capacity), sizeof(type), NULL, #type)
 #define list_with_free(type, free_fn) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof(type), (free_fn), #type)
 #define list_with_capacity_free(type, capacity, free_fn) _list_create((capacity), sizeof(type), (free_fn), #type)
 
@@ -43,6 +43,7 @@ typedef struct list list_t;
 #define list_trim(list) list_set_capacity(list, list_size(list))
 
 #define list_foreach(list, type, item)             \
+  list_assert_type(list, type);                    \
   for (size_t EDS_ITERATOR = 0, EDS_KEEP = 1;      \
        EDS_KEEP && EDS_ITERATOR < list_size(list); \
        EDS_KEEP = !EDS_KEEP, EDS_ITERATOR++)       \
@@ -113,7 +114,6 @@ struct list {
   size_t capacity;
   size_t data_size;
 
-  bool is_sotring_pointers;
   const char *type_name;
 
   void (*free_fn)(void *);
