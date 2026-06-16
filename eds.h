@@ -513,7 +513,7 @@ void _hashmap_grow(hashmap_t *hashmap) {
 
     size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
     for (size_t i = idx; i < new_cap; i++) {
-      if (states_grow[i] == 0) {
+      if (states_grow[i] != 1) {
         memcpy((char *)keys_grow + i * hashmap->key_size, key, hashmap->key_size);
         memcpy((char *)values_grow + i * hashmap->value_size, val, hashmap->value_size);
         states_grow[i] = 1;
@@ -534,11 +534,18 @@ void _hashmap_insert(hashmap_t *hashmap, void *key, void *value) {
 
   size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
   for (size_t i = idx; i < hashmap->capacity; i++) {
-    if (hashmap->states[i] == 0) {
-      memcpy((char *)hashmap->keys + i * hashmap->key_size, key, hashmap->key_size);
-      memcpy((char *)hashmap->values + i * hashmap->value_size, value, hashmap->value_size);
+    void *test_key = (char *)hashmap->keys + i * hashmap->key_size;
+    void *valueptr = (char *)hashmap->values + i * hashmap->value_size;
+
+    if (hashmap->states[i] != 1) {
+      memcpy(test_key, key, hashmap->key_size);
+      memcpy(valueptr, value, hashmap->value_size);
       hashmap->states[i] = 1;
       break;
+    } else if (hashmap->cmp_fn(key, test_key, hashmap->key_size) == true) {
+      if (hashmap->val_free_fn)
+        hashmap->val_free_fn(valueptr);
+      memcpy(valueptr, value, hashmap->value_size);
     }
   }
 }
@@ -556,6 +563,54 @@ bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target) {
       if (hashmap->cmp_fn(test_key, key, hashmap->key_size) == true) {
         void *value = (char *)hashmap->values + i * hashmap->value_size;
         memcpy(out_target, value, hashmap->value_size);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool _hashmap_remove(hashmap_t *hashmap, void *key) {
+  size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
+
+  for (size_t i = idx; i < hashmap->capacity; i++) {
+    char state = hashmap->states[i];
+    if (state == 0)
+      return false;
+
+    if (state == 1) {
+      void *test_key = (char *)hashmap->keys + i * hashmap->key_size;
+      if (hashmap->cmp_fn(test_key, key, hashmap->key_size) == true) {
+        void *value = (char *)hashmap->values + i * hashmap->value_size;
+        if (hashmap->val_free_fn)
+          hashmap->val_free_fn(value);
+        if (hashmap->key_free_fn)
+          hashmap->key_free_fn(test_key);
+
+        hashmap->states[i] = 2;
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
+  size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
+
+  for (size_t i = idx; i < hashmap->capacity; i++) {
+    char state = hashmap->states[i];
+    if (state == 0)
+      return false;
+
+    if (state == 1) {
+      void *test_key = (char *)hashmap->keys + i * hashmap->key_size;
+      if (hashmap->cmp_fn(test_key, key, hashmap->key_size) == true) {
+        void *value = (char *)hashmap->values + i * hashmap->value_size;
+        memcpy(out_target, value, hashmap->value_size);
+        hashmap->states[i] = 2;
         return true;
       }
     }
