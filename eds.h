@@ -29,11 +29,21 @@ typedef struct list list_t;
 #define list_get_as(list, index, type) \
   (list_assert_type(list, type, "get"), (*(type *)list_at((list), (index))))
 
-#define list_set(list, index, data)      \
-  do {                                   \
-    typeof((data)) lvalue = (data);      \
-    _list_set((list), (index), &lvalue); \
+#define list_set_unchecked(list, index, data) \
+  do {                                        \
+    typeof((data)) lvalue = (data);           \
+    _list_set((list), (index), &lvalue);      \
   } while (0)
+
+#define list_set_checked(list, index, data, type) \
+  do {                                            \
+    list_assert_type(list, type, "set");          \
+    type lvalue = (data);                         \
+    _list_set((list), (index), &lvalue);          \
+  } while (0)
+
+#define EDS_SET_MACRO(_1, _2, _3, _4, name, ...) name
+#define list_set(...) EDS_SET_MACRO(__VA_ARGS__, list_set_checked, list_set_unchecked)(__VA_ARGS__)
 
 #define list_append_unchecked(list, data) \
   do {                                    \
