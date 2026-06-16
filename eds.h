@@ -107,6 +107,12 @@ void _list_destroy(list_t **list);
 void _list_assert_type(list_t *list, char *check, char *action);
 #endif // EDS_NO_LIST
 
+#ifndef EDS_NO_HASHMAP
+
+typedef struct hashmap hashmap_t;
+
+#endif // EDS_NO_HASHMAP
+
 #endif
 
 #define EDS_IMPLEMENTATION
@@ -332,5 +338,28 @@ bool _list_of_type(list_t *l, char *type_name) {
 }
 
 #endif // EDS_NO_LIST
+
+#ifndef EDS_NO_HASHMAP
+
+struct hashmap {
+  list_t *data; // Stores Key-Value Pairs contigous in memory
+                // Each element is of size key_size + val_size
+                // They first key_size bytes are the key
+                // The next val_size bytes are the bytes
+
+  size_t key_size, val_size;
+  const char *key_name, val_name;
+
+  void (*key_free_fn)(void *);
+  void (*val_free_fn)(void *);
+
+  bool is_string_key;
+};
+
+void _hashmap_create(size_t capacity, size_t key_size, size_t val_size);
+void hashmap_set_key_free_fn(void (*key_free_fn)(void *));
+void hashmap_set_val_free_fn(void (*val_free_fn)(void *));
+
+#endif
 
 #endif // EDS_IMPLEMENTATION
