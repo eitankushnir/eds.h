@@ -18,32 +18,60 @@ typedef struct list list_t;
 
 #define list_destroy(list) _list_destroy(&(list))
 
-#define list_assert_type(list, type) _list_assert_type(list, #type);
+#if defined(EDS_NO_CHECKS)
+#define list_assert_type(list, type, action) ((void)0)
+#else
+#define list_assert_type(list, type, action) _list_assert_type(list, #type, action)
+#endif
 
-#define list_get_as(list, index, type) (*(type *)list_at((list), (index)))
+#define list_of_type(list, type) _list_of_type(list, #type)
+
+#define list_get_as(list, index, type) \
+  (list_assert_type(list, type, "get"), (*(type *)list_at((list), (index))))
+
 #define list_set(list, index, data)      \
   do {                                   \
     typeof((data)) lvalue = (data);      \
     _list_set((list), (index), &lvalue); \
   } while (0)
 
-#define list_append(list, data)     \
-  do {                              \
-    typeof((data)) lvalue = (data); \
-    _list_append((list), &lvalue);  \
-  } while (0)
-
-#define list_insert(list, index, data)    \
+#define list_append_unchecked(list, data) \
   do {                                    \
     typeof((data)) lvalue = (data);       \
-    _list_insert((list), index, &lvalue); \
+    _list_append((list), &lvalue);        \
   } while (0)
+
+#define list_append_checked(list, data, type) \
+  do {                                        \
+    list_assert_type(list, type, "append");   \
+    type lvalue = (data);                     \
+    _list_append((list), &lvalue);            \
+  } while (0)
+
+#define EDS_APPEND_MACRO(_1, _2, _3, name, ...) name
+#define list_append(...) EDS_APPEND_MACRO(__VA_ARGS__, list_append_checked, list_append_unchecked)(__VA_ARGS__)
+
+#define list_insert_unchecked(list, index, data) \
+  do {                                           \
+    typeof((data)) lvalue = (data);              \
+    _list_insert((list), index, &lvalue);        \
+  } while (0)
+
+#define list_insert_checked(list, index, data, type) \
+  do {                                               \
+    list_assert_type(list, type, "insert");          \
+    type lvalue = (data);                            \
+    _list_insert((list), index, &lvalue);            \
+  } while (0)
+
+#define EDS_INSERT_MACRO(_1, _2, _3, _4, name, ...) name
+#define list_insert(...) EDS_INSERT_MACRO(__VA_ARGS__, list_insert_checked, list_insert_unchecked)(__VA_ARGS__)
 
 #define list_clear(list) list_set_size(list, 0)
 #define list_trim(list) list_set_capacity(list, list_size(list))
 
 #define list_foreach(list, type, item)             \
-  list_assert_type(list, type);                    \
+  list_assert_type(list, type, "foreach");         \
   for (size_t EDS_ITERATOR = 0, EDS_KEEP = 1;      \
        EDS_KEEP && EDS_ITERATOR < list_size(list); \
        EDS_KEEP = !EDS_KEEP, EDS_ITERATOR++)       \
@@ -67,7 +95,7 @@ void list_pop(list_t *list, size_t index, void *out_target);
 list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), char *type_name);
 void _list_destroy(list_t **list);
 
-void _list_assert_type(list_t *list, char *check);
+void _list_assert_type(list_t *list, char *check, char *action);
 #endif // EDS_NO_LIST
 
 #endif
@@ -185,9 +213,13 @@ void _list_append(list_t *list, void *data) {
   list->size++;
 }
 
-void _list_assert_type(list_t *list, char *check) {
-  if (strcmp(check, list->type_name) != 0)
-    eds_error("Expected list of type %s but got %s\n", check, list->type_name);
+void _list_assert_type(list_t *list, char *check, char *action) {
+  if (strcmp(check, list->type_name) != 0) {
+    if (action)
+      eds_error("Type mismatch. Trying to use %s with type %s on list of type %s.", action, check, list->type_name);
+    else
+      eds_error("Type mismatch. List of type %s does not match type %s.\n", list->type_name, check);
+  }
 }
 
 void list_remove(list_t *list, size_t index) {
@@ -284,6 +316,10 @@ void list_set_capacity(list_t *list, size_t capacity) {
 
   list->data = eds_realloc(list->data, capacity * list->data_size);
   list->capacity = capacity;
+}
+
+bool _list_of_type(list_t *l, char *type_name) {
+  return strcmp(l->type_name, type_name) == 0;
 }
 
 #endif // EDS_NO_LIST
