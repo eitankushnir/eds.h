@@ -41,6 +41,12 @@ typedef struct list list_t;
 #define list_clear(list) list_set_size(list, 0)
 #define list_trim(list) list_set_capacity(list, list_size(list))
 
+#define list_foreach(list, type, item)             \
+  for (size_t EDS_ITERATOR = 0, EDS_KEEP = 1;      \
+       EDS_KEEP && EDS_ITERATOR < list_size(list); \
+       EDS_KEEP = !EDS_KEEP, EDS_ITERATOR++)       \
+    for (type item = list_get_as(list, EDS_ITERATOR, type); EDS_KEEP; EDS_KEEP = !EDS_KEEP)
+
 size_t list_size(list_t *list);
 size_t list_capacity(list_t *list);
 bool list_is_empty(list_t *list);
