@@ -22,14 +22,20 @@ typedef struct list list_t;
 #define list_get_as(list, index, type) (*(type *)list_at((list), (index)))
 #define list_set(list, index, data)      \
   do {                                   \
-    typeof((data)) lvalue = data;        \
+    typeof((data)) lvalue = (data);      \
     _list_set((list), (index), &lvalue); \
   } while (0)
 
-#define list_append(list, data)    \
-  do {                             \
-    typeof((data)) lvalue = data;  \
-    _list_append((list), &lvalue); \
+#define list_append(list, data)     \
+  do {                              \
+    typeof((data)) lvalue = (data); \
+    _list_append((list), &lvalue);  \
+  } while (0)
+
+#define list_insert(list, index, data)    \
+  do {                                    \
+    typeof((data)) lvalue = (data);       \
+    _list_insert((list), index, &lvalue); \
   } while (0)
 
 size_t list_size(list_t *list);
@@ -39,6 +45,7 @@ bool list_is_empty(list_t *list);
 void *list_at(list_t *list, size_t index);
 void _list_set(list_t *list, size_t index, void *data);
 void _list_append(list_t *list, void *data);
+void _list_insert(list_t *list, size_t index, void *data);
 
 void list_remove(list_t *list, size_t index);
 void list_pop(list_t *list, size_t index, void *out_target);
@@ -201,6 +208,30 @@ void list_pop(list_t *list, size_t index, void *out_target) {
   size_t bytes_to_shift = item_to_shift * list->data_size;
   memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
   list->size--;
+}
+
+void _list_insert(list_t *list, size_t index, void *data) {
+  if (index == list->size) {
+    _list_append(list, data);
+    return;
+  }
+
+  if (index > list->size)
+    eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
+
+  if (list->size >= list->capacity) {
+    list->data = eds_realloc(list->data, list->data_size * list->capacity * 2);
+    list->capacity *= 2;
+  }
+
+  size_t item_to_shift = list->size - index;
+  if (!item_to_shift)
+    return;
+
+  size_t bytes_to_shift = item_to_shift * list->data_size;
+  memmove((char *)list->data + (index + 1) * list->data_size, (char *)list->data + list->data_size * index, bytes_to_shift);
+  memcpy((char *)list->data + index * list->data_size, data, list->data_size);
+  list->size++;
 }
 
 #endif // EDS_NO_LIST
