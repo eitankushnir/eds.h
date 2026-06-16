@@ -11,9 +11,9 @@
 typedef struct list list_t;
 
 #define list(type) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof(type), NULL, #type)
-#define list_with_capcity(type, capacity) _list_create((capacity), sizeof((type)), NULL, #type)
-#define list_with_free(type, free_fn) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof((type)), (free_fn), #type)
-#define list_with_capacity_free(type, capacity, free_fn) _list_create((capacity), sizeof((type)), (free_fn), #type)
+#define list_with_capcity(type, capacity) _list_create((capacity), sizeof(type), NULL, #type)
+#define list_with_free(type, free_fn) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof(type), (free_fn), #type)
+#define list_with_capacity_free(type, capacity, free_fn) _list_create((capacity), sizeof(type), (free_fn), #type)
 
 #define list_destroy(list) _list_destroy(&(list))
 
@@ -39,6 +39,9 @@ bool list_is_empty(list_t *list);
 void *list_at(list_t *list, size_t index);
 void _list_set(list_t *list, size_t index, void *data);
 void _list_append(list_t *list, void *data);
+
+void list_remove(list_t *list, size_t index);
+void list_pop(list_t *list, size_t index, void *out_target);
 
 list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), char *type_name);
 void _list_destroy(list_t **list);
@@ -77,6 +80,11 @@ void *eds_realloc(void *p, size_t bytes) {
   return p;
 }
 
+void eds_free(void *ptr) {
+  free(*(void **)ptr);
+  *(void **)ptr = NULL;
+}
+
 #ifndef EDS_NO_LIST
 
 struct list {
@@ -112,6 +120,8 @@ void _list_destroy(list_t **listptr) {
 
   if (l->free_fn) {
     for (size_t i = 0; i < l->size; i++) {
+      void *item_to_remove = (char *)l->data + l->data_size * i;
+      l->free_fn(item_to_remove);
     }
   }
 
@@ -158,6 +168,39 @@ void _list_append(list_t *list, void *data) {
 void _list_assert_type(list_t *list, char *check) {
   if (strcmp(check, list->type_name) != 0)
     eds_error("Expected list of type %s but got %s\n", check, list->type_name);
+}
+
+void list_remove(list_t *list, size_t index) {
+  if (index >= list->size)
+    eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
+
+  void *item_to_remove = (char *)list->data + index * list->data_size;
+  if (list->free_fn)
+    list->free_fn(item_to_remove);
+
+  size_t item_to_shift = list->size - index - 1;
+  if (!item_to_shift)
+    return;
+
+  size_t bytes_to_shift = item_to_shift * list->data_size;
+  memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
+  list->size--;
+}
+
+void list_pop(list_t *list, size_t index, void *out_target) {
+  if (index >= list->size)
+    eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
+
+  void *item_to_remove = (char *)list->data + index * list->data_size;
+  memcpy(out_target, item_to_remove, list->data_size);
+
+  size_t item_to_shift = list->size - index - 1;
+  if (!item_to_shift)
+    return;
+
+  size_t bytes_to_shift = item_to_shift * list->data_size;
+  memmove(item_to_remove, (char *)item_to_remove + list->data_size, bytes_to_shift);
+  list->size--;
 }
 
 #endif // EDS_NO_LIST
