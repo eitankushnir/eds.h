@@ -1,3 +1,3 @@
 # eds - Eitan Data Structures
 
-Ergonomic C library for type-safe generic collections and data structures.
+Header-Only C library for generic collections and data structures.
