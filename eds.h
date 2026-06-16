@@ -10,12 +10,14 @@
 
 typedef struct list list_t;
 
-#define list(type) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof(type), NULL)
-#define list_with_capcity(type, capacity) _list_create((capacity), sizeof((type)), NULL)
-#define list_with_free(type, free_fn) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof((type)), (free_fn))
-#define list_with_capacity_free(type, capacity, free_fn) _list_create((capacity), sizeof((type)), (free_fn))
+#define list(type) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof(type), NULL, #type)
+#define list_with_capcity(type, capacity) _list_create((capacity), sizeof((type)), NULL, #type)
+#define list_with_free(type, free_fn) _list_create(EDS_LIST_INITIAL_CAPCITY, sizeof((type)), (free_fn), #type)
+#define list_with_capacity_free(type, capacity, free_fn) _list_create((capacity), sizeof((type)), (free_fn), #type)
 
 #define list_destroy(list) _list_destroy(&(list))
+
+#define list_assert_type(list, type) _list_assert_type(list, #type);
 
 #define list_at_as(list, index, type) (*(type *)list_at((list), (index)))
 #define list_set(list, index, data)      \
@@ -38,8 +40,10 @@ void *list_at(list_t *list, size_t index);
 void _list_set(list_t *list, size_t index, void *data);
 void _list_append(list_t *list, void *data);
 
-list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *));
+list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), char *type_name);
 void _list_destroy(list_t **list);
+
+void _list_assert_type(list_t *list, char *check);
 #endif // EDS_NO_LIST
 
 #endif
@@ -82,11 +86,12 @@ struct list {
   size_t data_size;
 
   bool is_sotring_pointers;
+  const char *type_name;
 
   void (*free_fn)(void *);
 };
 
-list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *)) {
+list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), char *type_name) {
   if (!capacity) {
     eds_error("list_t cannot have 0 capacity");
   }
@@ -96,6 +101,7 @@ list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *))
   list->data_size = data_size;
   list->free_fn = free_fn;
   list->data = eds_malloc(data_size * capacity);
+  list->type_name = type_name;
   return list;
 }
 
@@ -148,6 +154,12 @@ void _list_append(list_t *list, void *data) {
   memcpy((char *)list->data + list->size * list->data_size, data, list->data_size);
   list->size++;
 }
+
+void _list_assert_type(list_t *list, char *check) {
+  if (strcmp(check, list->type_name) != 0)
+    eds_error("Expected list of type %s but got %s\n", check, list->type_name);
+}
+
 #endif // EDS_NO_LIST
 
 #endif // EDS_IMPLEMENTATION
