@@ -137,7 +137,7 @@ size_t hashmap_capacity(hashmap_t *hashmap);
 size_t hashmap_size(hashmap_t *hashmap);
 
 void _hashmap_grow(hashmap_t *hashmap);
-void _hashmap_insert(hashmap_t *hashmap, void *key, void *value);
+void _hashmap_set(hashmap_t *hashmap, void *key, void *value);
 
 bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target);
 
@@ -508,39 +508,49 @@ void _hashmap_grow(hashmap_t *hashmap) {
   memset(states_grow, 0, sizeof(char) * new_cap);
 
   for (size_t i = 0; i < cap; i++) {
+    if (hashmap->states[i] != 1)
+      continue;
+
     void *key = (char *)hashmap->keys + i * hashmap->key_size;
     void *val = (char *)hashmap->values + i * hashmap->value_size;
 
-    size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
-    for (size_t i = idx; i < new_cap; i++) {
-      if (states_grow[i] != 1) {
-        memcpy((char *)keys_grow + i * hashmap->key_size, key, hashmap->key_size);
-        memcpy((char *)values_grow + i * hashmap->value_size, val, hashmap->value_size);
-        states_grow[i] = 1;
+    size_t hash = hashmap->hash_fn(key, hashmap->key_size);
+    for (size_t j = 0; j < new_cap; j++) {
+      size_t idx = (hash + j) & (new_cap - 1);
+      if (states_grow[idx] != 1) {
+        memcpy((char *)keys_grow + idx * hashmap->key_size, key, hashmap->key_size);
+        memcpy((char *)values_grow + idx * hashmap->value_size, val, hashmap->value_size);
+        states_grow[idx] = 1;
+        break;
       }
     }
   }
 
   free(hashmap->keys);
   free(hashmap->values);
+  free(hashmap->states);
   hashmap->keys = keys_grow;
   hashmap->values = values_grow;
+  hashmap->states = states_grow;
+  hashmap->capacity = new_cap;
 }
 
-void _hashmap_insert(hashmap_t *hashmap, void *key, void *value) {
+void _hashmap_set(hashmap_t *hashmap, void *key, void *value) {
   if (hashmap->size >= hashmap->capacity * hashmap->load_factor) {
     _hashmap_grow(hashmap);
   }
 
-  size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
-  for (size_t i = idx; i < hashmap->capacity; i++) {
-    void *test_key = (char *)hashmap->keys + i * hashmap->key_size;
-    void *valueptr = (char *)hashmap->values + i * hashmap->value_size;
+  size_t hash = hashmap->hash_fn(key, hashmap->key_size);
+  for (size_t i = 0; i < hashmap->capacity; i++) {
+    size_t idx = (hash + i) & (hashmap->capacity - 1);
+    void *test_key = (char *)hashmap->keys + idx * hashmap->key_size;
+    void *valueptr = (char *)hashmap->values + idx * hashmap->value_size;
 
-    if (hashmap->states[i] != 1) {
+    if (hashmap->states[idx] != 1) {
       memcpy(test_key, key, hashmap->key_size);
       memcpy(valueptr, value, hashmap->value_size);
-      hashmap->states[i] = 1;
+      hashmap->states[idx] = 1;
+      hashmap->size++;
       break;
     } else if (hashmap->cmp_fn(key, test_key, hashmap->key_size) == true) {
       if (hashmap->val_free_fn)
@@ -572,23 +582,24 @@ bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target) {
 }
 
 bool _hashmap_remove(hashmap_t *hashmap, void *key) {
-  size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
+  size_t hash = hashmap->hash_fn(key, hashmap->key_size);
 
-  for (size_t i = idx; i < hashmap->capacity; i++) {
-    char state = hashmap->states[i];
+  for (size_t i = 0; i < hashmap->capacity; i++) {
+    size_t idx = (hash + i) & (hashmap->capacity - 1);
+    char state = hashmap->states[idx];
     if (state == 0)
       return false;
 
     if (state == 1) {
-      void *test_key = (char *)hashmap->keys + i * hashmap->key_size;
+      void *test_key = (char *)hashmap->keys + idx * hashmap->key_size;
       if (hashmap->cmp_fn(test_key, key, hashmap->key_size) == true) {
-        void *value = (char *)hashmap->values + i * hashmap->value_size;
+        void *value = (char *)hashmap->values + idx * hashmap->value_size;
         if (hashmap->val_free_fn)
           hashmap->val_free_fn(value);
         if (hashmap->key_free_fn)
           hashmap->key_free_fn(test_key);
 
-        hashmap->states[i] = 2;
+        hashmap->states[idx] = 2;
         return true;
       }
     }
@@ -598,19 +609,20 @@ bool _hashmap_remove(hashmap_t *hashmap, void *key) {
 }
 
 bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
-  size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
+  size_t hash = hashmap->hash_fn(key, hashmap->key_size);
 
-  for (size_t i = idx; i < hashmap->capacity; i++) {
-    char state = hashmap->states[i];
+  for (size_t i = 0; i < hashmap->capacity; i++) {
+    size_t idx = (hash + i) & (hashmap->capacity - 1);
+    char state = hashmap->states[idx];
     if (state == 0)
       return false;
 
     if (state == 1) {
-      void *test_key = (char *)hashmap->keys + i * hashmap->key_size;
+      void *test_key = (char *)hashmap->keys + idx * hashmap->key_size;
       if (hashmap->cmp_fn(test_key, key, hashmap->key_size) == true) {
-        void *value = (char *)hashmap->values + i * hashmap->value_size;
+        void *value = (char *)hashmap->values + idx * hashmap->value_size;
         memcpy(out_target, value, hashmap->value_size);
-        hashmap->states[i] = 2;
+        hashmap->states[idx] = 2;
         return true;
       }
     }
