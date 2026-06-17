@@ -141,9 +141,23 @@ typedef struct hashmap hashmap_t;
   (strmap_assert_type(HashMap, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
    _hashmap_get(HashMap, &(char *){Key}, Target))
 
-#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                      \
-  (hashmap_assert_type(HashMap, KT, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
+#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                       \
+  (hashmap_assert_type(HashMap, KT, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
    _hashmap_get(HashMap, &(KT){Key}, Target))
+
+#define strmap_pop(VT, HashMap, Key, Target)                                                                                                      \
+  (strmap_assert_type(HashMap, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_pop target pointer does not point to a value of " #VT "\n"), \
+   _hashmap_pop(HashMap, &(char *){Key}, Target))
+
+#define hashmap_pop(KT, VT, HashMap, Key, Target)                                                                                                       \
+  (hashmap_assert_type(HashMap, KT, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_pop target pointer does not point to a value of " #VT "\n"), \
+   _hashmap_pop(HashMap, &(KT){Key}, Target))
+
+#define hashmap_remove(KT, VT, HashMap, Key) \
+  (hashmap_assert_type(HashMap, KT, VT, "remove"), _hashmap_remove(HashMap, &(KT){Key}))
+
+#define strmap_remove(VT, HashMap, Key) \
+  (strmap_assert_type(HashMap, VT, "remove"), _hashmap_remove(HashMap, &(char *){Key}))
 
 hashmap_t *_hashmap_create(
     size_t capacity,
@@ -633,6 +647,7 @@ bool _hashmap_remove(hashmap_t *hashmap, void *key) {
           hashmap->key_free_fn(test_key);
 
         hashmap->states[idx] = 2;
+        hashmap->size--;
         return true;
       }
     }
@@ -656,6 +671,7 @@ bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
         void *value = (char *)hashmap->values + idx * hashmap->value_size;
         memcpy(out_target, value, hashmap->value_size);
         hashmap->states[idx] = 2;
+        hashmap->size--;
         return true;
       }
     }
