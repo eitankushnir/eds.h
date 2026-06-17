@@ -114,41 +114,35 @@ typedef struct hashmap hashmap_t;
 #define EDS_HASHMAP_INITIAL_CAPACITY 8
 #define EDS_HASHMAP_LOAD_FACTOR 0.6f
 
-#define EDS_HM_ASSERT_MACRO(_1, _2, _3, _4, name, ...) name
-#define _hashmap_assert(hashmap, KT, VT, action) _hashmap_assert_type(hashmap, #KT, #VT, action)
-#define _strmap_assert(hashmap, VT, action) _strmap_assert_type(hashmap, #VT, action)
-#define hashmap_assert_type(...) EDS_HM_ASSERT_MACRO(__VA_ARGS__, _hashmap_assert, _strmap_assert)(__VA_ARGS__)
+#if defined(EDS_NO_CHECKS)
+#define hashmap_assert_type(hashmap, KT, VT, action) ((void)0)
+#define strmap_assert_type(hashmap, VT, action) ((void)0)
+#else
+#define hashmap_assert_type(hashmap, KT, VT, action) _hashmap_assert_type(hashmap, #KT, #VT, action)
+#define strmap_assert_type(hashmap, VT, action) _strmap_assert_type(hashmap, #VT, action)
+#endif
 
 #define hashmap(KT, VT) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(KT), sizeof(VT), #KT, #VT, _eds_cmp_bytes, _eds_hash_bytes, EDS_HASHMAP_LOAD_FACTOR)
 #define strmap(VT) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(char *), sizeof(VT), "strmap", #VT, _eds_cmp_str, _eds_hash_str, EDS_HASHMAP_LOAD_FACTOR)
+
 #define hashmap_destroy(hashmap) _hashmap_destroy(&(hashmap))
 
 #define hashmap_set(KT, VT, HashMap, Key, Value) \
-  do {                                           \
-    _hashmap_assert(HashMap, KT, VT, "set");     \
-    KT key = (Key);                              \
-    VT val = (Value);                            \
-    _hashmap_set(HashMap, &key, &val);           \
-  } while (0)
+  (hashmap_assert_type(HashMap, KT, VT, "set"), _hashmap_set(HashMap, &(KT){Key}, &(VT){Value}))
 
-#define strmap_set(VT, StrMap, Key, Value) \
-  do {                                     \
-    _strmap_assert(StrMap, VT, "set");     \
-    const char *key = (Key);               \
-    VT val = (Value);                      \
-    _hashmap_set(StrMap, &key, &val);      \
-  } while (0)
+#define strmap_set(VT, HashMap, Key, Value) \
+  (strmap_assert_type(HashMap, VT, "set"), _hashmap_set(HashMap, &(char *){Key}, &(VT){Value}))
 
-#define EDS_SAME_TYPE(var, type) _Generic((var), typeof(type) *: 1, default: 0)
-#define EDS_ASSERT_SAME_TYPE(var, type, errmsg) \
-  EDS_SAME_TYPE(var, type) ? (void)0 : eds_error(errmsg)
+#define EDS_IS_POINTER_TO(var, type) _Generic((var), typeof(type) *: 1, default: 0)
+#define EDS_ASSERT_POINTER_TO(var, type, errmsg) \
+  EDS_IS_POINTER_TO(var, type) ? (void)0 : eds_error(errmsg)
 
-#define strmap_get(VT, HashMap, Key, Target)                                                                                                  \
-  (_strmap_assert(HashMap, VT, "get"), EDS_ASSERT_SAME_TYPE(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
+#define strmap_get(VT, HashMap, Key, Target)                                                                                                      \
+  (strmap_assert_type(HashMap, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
    _hashmap_get(HashMap, &(char *){Key}, Target))
 
-#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                  \
-  (_hashmap_assert(HashMap, KT, VT, "get"), EDS_ASSERT_SAME_TYPE(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
+#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                      \
+  (hashmap_assert_type(HashMap, KT, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
    _hashmap_get(HashMap, &(KT){Key}, Target))
 
 hashmap_t *_hashmap_create(
