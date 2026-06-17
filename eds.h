@@ -114,9 +114,42 @@ typedef struct hashmap hashmap_t;
 #define EDS_HASHMAP_INITIAL_CAPACITY 8
 #define EDS_HASHMAP_LOAD_FACTOR 0.6f
 
-#define hashmap(key, val) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(key), sizeof(val), #key, #val, _eds_cmp_bytes, _eds_hash_bytes, EDS_HASHMAP_LOAD_FACTOR)
-#define strmap(val) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(char *), sizeof(val), "strmap", #val, _eds_cmp_str, _eds_hash_str, EDS_HASHMAP_LOAD_FACTOR)
+#define EDS_HM_ASSERT_MACRO(_1, _2, _3, _4, name, ...) name
+#define _hashmap_assert(hashmap, KT, VT, action) _hashmap_assert_type(hashmap, #KT, #VT, action)
+#define _strmap_assert(hashmap, VT, action) _strmap_assert_type(hashmap, #VT, action)
+#define hashmap_assert_type(...) EDS_HM_ASSERT_MACRO(__VA_ARGS__, _hashmap_assert, _strmap_assert)(__VA_ARGS__)
+
+#define hashmap(KT, VT) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(KT), sizeof(VT), #KT, #VT, _eds_cmp_bytes, _eds_hash_bytes, EDS_HASHMAP_LOAD_FACTOR)
+#define strmap(VT) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(char *), sizeof(VT), "strmap", #VT, _eds_cmp_str, _eds_hash_str, EDS_HASHMAP_LOAD_FACTOR)
 #define hashmap_destroy(hashmap) _hashmap_destroy(&(hashmap))
+
+#define hashmap_set(KT, VT, HashMap, Key, Value) \
+  do {                                           \
+    _hashmap_assert(HashMap, KT, VT, "set");     \
+    KT key = (Key);                              \
+    VT val = (Value);                            \
+    _hashmap_set(HashMap, &key, &val);           \
+  } while (0)
+
+#define strmap_set(VT, StrMap, Key, Value) \
+  do {                                     \
+    _strmap_assert(StrMap, VT, "set");     \
+    const char *key = (Key);               \
+    VT val = (Value);                      \
+    _hashmap_set(StrMap, &key, &val);      \
+  } while (0)
+
+#define EDS_SAME_TYPE(var, type) _Generic((var), typeof(type) *: 1, default: 0)
+#define EDS_ASSERT_SAME_TYPE(var, type, errmsg) \
+  EDS_SAME_TYPE(var, type) ? (void)0 : eds_error(errmsg)
+
+#define strmap_get(VT, HashMap, Key, Target)                                                                                                  \
+  (_strmap_assert(HashMap, VT, "get"), EDS_ASSERT_SAME_TYPE(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
+   _hashmap_get(HashMap, &(char *){Key}, Target))
+
+#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                  \
+  (_hashmap_assert(HashMap, KT, VT, "get"), EDS_ASSERT_SAME_TYPE(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
+   _hashmap_get(HashMap, &(KT){Key}, Target))
 
 hashmap_t *_hashmap_create(
     size_t capacity,
@@ -141,6 +174,11 @@ void _hashmap_set(hashmap_t *hashmap, void *key, void *value);
 
 bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target);
 
+bool _hashmap_remove(hashmap_t *hashmap, void *key);
+bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target);
+
+void _hashmap_assert_type(hashmap_t *hashmap, const char *key_name, const char *val_name, const char *action);
+void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *action);
 #endif // EDS_NO_HASHMAP
 
 #endif
@@ -556,6 +594,7 @@ void _hashmap_set(hashmap_t *hashmap, void *key, void *value) {
       if (hashmap->val_free_fn)
         hashmap->val_free_fn(valueptr);
       memcpy(valueptr, value, hashmap->value_size);
+      break;
     }
   }
 }
@@ -631,6 +670,35 @@ bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
   return false;
 }
 
+void _hashmap_assert_type(hashmap_t *hashmap, const char *key_name, const char *val_name, const char *action) {
+  if (strcmp(key_name, hashmap->key_name) != 0 || strcmp(val_name, hashmap->val_name) != 0) {
+    if (action) {
+      eds_error("Type mismatch. Trying to use %s with type (%s, %s) on hashmap of type (%s, %s).",
+                action,
+                key_name, val_name,
+                hashmap->key_name, hashmap->val_name);
+    } else {
+      eds_error("Type mismatch. hashmap of type (%s, %s) does not match (%s, %s).",
+                hashmap->key_name, hashmap->val_name,
+                key_name, val_name);
+    }
+  }
+}
+
+void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *action) {
+  if (hashmap->cmp_fn != _eds_cmp_str || strcmp(val_name, hashmap->val_name) != 0) {
+    if (action) {
+      eds_error("Type mismatch. Trying to use %s with type (strmap, %s) on strmap of type (strmap, %s).",
+                action,
+                val_name,
+                hashmap->val_name);
+    } else {
+      eds_error("Type mismatch. strmap of type (strmap, %s) does not match (strmap, %s).",
+                hashmap->val_name,
+                val_name);
+    }
+  }
+}
 #endif
 
 #endif // EDS_IMPLEMENTATION
