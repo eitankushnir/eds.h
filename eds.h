@@ -181,7 +181,7 @@ size_t hashmap_capacity(hashmap_t *hashmap);
 #define strmap_capacity(strmap) hashmap_capacity(strmap)
 
 size_t hashmap_size(hashmap_t *hashmap);
-#define strmap_size(strmap) hashmap_capacity(strmap)
+#define strmap_size(strmap) hashmap_size(strmap)
 
 void _hashmap_grow(hashmap_t *hashmap);
 void _hashmap_set(hashmap_t *hashmap, void *key, void *value);
