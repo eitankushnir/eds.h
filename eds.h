@@ -126,38 +126,39 @@ typedef struct hashmap hashmap_t;
 #define strmap(VT) _hashmap_create(EDS_HASHMAP_INITIAL_CAPACITY, sizeof(char *), sizeof(VT), "strmap", #VT, _eds_cmp_str, _eds_hash_str, EDS_HASHMAP_LOAD_FACTOR)
 
 #define hashmap_destroy(hashmap) _hashmap_destroy(&(hashmap))
+#define strmap_destroy(strmap) _hashmap_destroy(&(strmap))
 
 #define hashmap_set(KT, VT, HashMap, Key, Value) \
   (hashmap_assert_type(HashMap, KT, VT, "set"), _hashmap_set(HashMap, &(KT){Key}, &(VT){Value}))
 
-#define strmap_set(VT, HashMap, Key, Value) \
-  (strmap_assert_type(HashMap, VT, "set"), _hashmap_set(HashMap, &(char *){Key}, &(VT){Value}))
+#define strmap_set(VT, StrMap, Key, Value) \
+  (strmap_assert_type(StrMap, VT, "set"), _hashmap_set(StrMap, &(char *){Key}, &(VT){Value}))
 
 #define EDS_IS_POINTER_TO(var, type) _Generic((var), typeof(type) *: 1, default: 0)
 #define EDS_ASSERT_POINTER_TO(var, type, errmsg) \
   EDS_IS_POINTER_TO(var, type) ? (void)0 : eds_error(errmsg)
 
-#define strmap_get(VT, HashMap, Key, Target)                                                                                                      \
-  (strmap_assert_type(HashMap, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
-   _hashmap_get(HashMap, &(char *){Key}, Target))
-
 #define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                       \
   (hashmap_assert_type(HashMap, KT, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
    _hashmap_get(HashMap, &(KT){Key}, Target))
 
-#define strmap_pop(VT, HashMap, Key, Target)                                                                                                      \
-  (strmap_assert_type(HashMap, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_pop target pointer does not point to a value of " #VT "\n"), \
-   _hashmap_pop(HashMap, &(char *){Key}, Target))
+#define strmap_get(VT, StrMap, Key, Target)                                                                                                      \
+  (strmap_assert_type(StrMap, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
+   _hashmap_get(StrMap, &(char *){Key}, Target))
 
 #define hashmap_pop(KT, VT, HashMap, Key, Target)                                                                                                       \
   (hashmap_assert_type(HashMap, KT, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_pop target pointer does not point to a value of " #VT "\n"), \
    _hashmap_pop(HashMap, &(KT){Key}, Target))
 
+#define strmap_pop(VT, StrMap, Key, Target)                                                                                                      \
+  (strmap_assert_type(StrMap, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_pop target pointer does not point to a value of " #VT "\n"), \
+   _hashmap_pop(StrMap, &(char *){Key}, Target))
+
 #define hashmap_remove(KT, VT, HashMap, Key) \
   (hashmap_assert_type(HashMap, KT, VT, "remove"), _hashmap_remove(HashMap, &(KT){Key}))
 
-#define strmap_remove(VT, HashMap, Key) \
-  (strmap_assert_type(HashMap, VT, "remove"), _hashmap_remove(HashMap, &(char *){Key}))
+#define strmap_remove(VT, StrMap, Key) \
+  (strmap_assert_type(StrMap, VT, "remove"), _hashmap_remove(StrMap, &(char *){Key}))
 
 hashmap_t *_hashmap_create(
     size_t capacity,
@@ -170,12 +171,17 @@ hashmap_t *_hashmap_create(
     float load_factor);
 
 void hashmap_set_key_free_fn(hashmap_t *hashmap, void (*key_free_fn)(void *));
+#define strmap_set_key_free_fn(strmap) hashmap_set_key_free_fn(strmap)
 void hashmap_set_val_free_fn(hashmap_t *hashmap, void (*val_free_fn)(void *));
+#define strmap_set_val_free_fn(strmap) hashmap_set_val_free_fn(strmap)
 
 void _hashmap_destroy(hashmap_t **hashmap);
 
 size_t hashmap_capacity(hashmap_t *hashmap);
+#define strmap_capacity(strmap) hashmap_capacity(strmap)
+
 size_t hashmap_size(hashmap_t *hashmap);
+#define strmap_size(strmap) hashmap_capacity(strmap)
 
 void _hashmap_grow(hashmap_t *hashmap);
 void _hashmap_set(hashmap_t *hashmap, void *key, void *value);
