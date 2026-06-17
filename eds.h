@@ -171,9 +171,9 @@ hashmap_t *_hashmap_create(
     float load_factor);
 
 void hashmap_set_key_free_fn(hashmap_t *hashmap, void (*key_free_fn)(void *));
-#define strmap_set_key_free_fn(strmap) hashmap_set_key_free_fn(strmap)
+#define strmap_set_key_free_fn(strmap, free_fn) hashmap_set_key_free_fn(strmap, free_fn)
 void hashmap_set_val_free_fn(hashmap_t *hashmap, void (*val_free_fn)(void *));
-#define strmap_set_val_free_fn(strmap) hashmap_set_val_free_fn(strmap)
+#define strmap_set_val_free_fn(strmap, free_fn) hashmap_set_val_free_fn(strmap, free_fn)
 
 void _hashmap_destroy(hashmap_t **hashmap);
 
