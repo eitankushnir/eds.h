@@ -193,6 +193,9 @@ bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target);
 
 void _hashmap_assert_type(hashmap_t *hashmap, const char *key_name, const char *val_name, const char *action);
 void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *action);
+
+void hashmap_clear(hashmap_t *hashmap);
+#define strmap_clear(strmap) hashmap_clear(strmap)
 #endif // EDS_NO_HASHMAP
 
 #endif
@@ -719,6 +722,22 @@ void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *a
     }
   }
 }
-#endif
+
+void hashmap_clear(hashmap_t *hashmap) {
+  for (size_t i = 0; i < hashmap->capacity; i++) {
+    if (hashmap->states[i] == 1) {
+      void *key = (char *)hashmap->keys + i * hashmap->key_size;
+      void *value = (char *)hashmap->values + i * hashmap->value_size;
+      if (hashmap->val_free_fn)
+        hashmap->val_free_fn(value);
+      if (hashmap->key_free_fn)
+        hashmap->key_free_fn(key);
+    }
+    hashmap->states[i] = 0;
+  }
+
+  hashmap->size = 0;
+}
+#endif // EDS_NO_HASHMAP
 
 #endif // EDS_IMPLEMENTATION
