@@ -670,6 +670,10 @@ bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
       if (hashmap->cmp_fn(test_key, key, hashmap->key_size) == true) {
         void *value = (char *)hashmap->values + idx * hashmap->value_size;
         memcpy(out_target, value, hashmap->value_size);
+
+        if (hashmap->key_free_fn)
+          hashmap->key_free_fn(test_key);
+
         hashmap->states[idx] = 2;
         hashmap->size--;
         return true;
