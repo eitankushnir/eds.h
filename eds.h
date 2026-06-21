@@ -7,8 +7,13 @@
 #include <string.h>
 
 #define EDS_IS_POINTER_TO(var, type) _Generic((var), typeof(type) *: 1, default: 0)
+
+#if defined(EDS_NO_CHECKS)
+#define EDS_ASSERT_POINTER_TO(var, type, errmsg) ((void)0)
+#else
 #define EDS_ASSERT_POINTER_TO(var, type, errmsg) \
   EDS_IS_POINTER_TO(var, type) ? (void)0 : eds_error(errmsg)
+#endif
 
 #ifndef EDS_NO_LIST
 #define EDS_LIST_INITIAL_CAPACITY 10
