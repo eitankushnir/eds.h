@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define EDS_IS_POINTER_TO(var, type) _Generic((var), typeof(type) *: 1, default: 0)
+#define EDS_ASSERT_POINTER_TO(var, type, errmsg) \
+  EDS_IS_POINTER_TO(var, type) ? (void)0 : eds_error(errmsg)
+
 #ifndef EDS_NO_LIST
 #define EDS_LIST_INITIAL_CAPACITY 10
 
@@ -41,6 +45,9 @@ typedef struct list list_t;
 #define list_clear(list) list_set_size(list, 0)
 #define list_trim(list) list_set_capacity(list, list_size(list))
 
+#define list_pop(type, list, index, target) \
+  (EDS_ASSERT_POINTER_TO(target, type, "list_pop target pointer does not point to a value of " #type), _list_pop(list, index, target))
+
 #define list_foreach(type, list, item)                                                   \
   for (size_t EDS_ITERATOR = (list_assert_type(list, type, "foreach"), 0), EDS_KEEP = 1; \
        EDS_KEEP && EDS_ITERATOR < list_size(list);                                       \
@@ -60,7 +67,7 @@ void _list_append(list_t *list, void *data);
 void _list_insert(list_t *list, size_t index, void *data);
 
 void list_remove(list_t *list, size_t index);
-void list_pop(list_t *list, size_t index, void *out_target);
+void _list_pop(list_t *list, size_t index, void *out_target);
 
 list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), const char *type_name);
 void _list_destroy(list_t **list);
@@ -101,24 +108,20 @@ typedef struct hashmap hashmap_t;
 #define strmap_set(VT, StrMap, Key, Value) \
   (strmap_assert_type(StrMap, VT, "set"), _hashmap_set(StrMap, &(char *){Key}, &(VT){Value}))
 
-#define EDS_IS_POINTER_TO(var, type) _Generic((var), typeof(type) *: 1, default: 0)
-#define EDS_ASSERT_POINTER_TO(var, type, errmsg) \
-  EDS_IS_POINTER_TO(var, type) ? (void)0 : eds_error(errmsg)
-
-#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                       \
-  (hashmap_assert_type(HashMap, KT, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_get target pointer does not point to a value of " #VT "\n"), \
+#define hashmap_get(KT, VT, HashMap, Key, Target)                                                                                                  \
+  (hashmap_assert_type(HashMap, KT, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_get target pointer does not point to a value of " #VT), \
    _hashmap_get(HashMap, &(KT){Key}, Target))
 
-#define strmap_get(VT, StrMap, Key, Target)                                                                                                      \
-  (strmap_assert_type(StrMap, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT "\n"), \
+#define strmap_get(VT, StrMap, Key, Target)                                                                                                 \
+  (strmap_assert_type(StrMap, VT, "get"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_get target pointer does not point to a value of " #VT), \
    _hashmap_get(StrMap, &(char *){Key}, Target))
 
-#define hashmap_pop(KT, VT, HashMap, Key, Target)                                                                                                       \
-  (hashmap_assert_type(HashMap, KT, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_pop target pointer does not point to a value of " #VT "\n"), \
+#define hashmap_pop(KT, VT, HashMap, Key, Target)                                                                                                  \
+  (hashmap_assert_type(HashMap, KT, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "hashmap_pop target pointer does not point to a value of " #VT), \
    _hashmap_pop(HashMap, &(KT){Key}, Target))
 
-#define strmap_pop(VT, StrMap, Key, Target)                                                                                                      \
-  (strmap_assert_type(StrMap, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_pop target pointer does not point to a value of " #VT "\n"), \
+#define strmap_pop(VT, StrMap, Key, Target)                                                                                                 \
+  (strmap_assert_type(StrMap, VT, "pop"), EDS_ASSERT_POINTER_TO(Target, VT, "strmap_pop target pointer does not point to a value of " #VT), \
    _hashmap_pop(StrMap, &(char *){Key}, Target))
 
 #define hashmap_remove(KT, HashMap, Key) \
@@ -318,7 +321,7 @@ void list_remove(list_t *list, size_t index) {
   list->size--;
 }
 
-void list_pop(list_t *list, size_t index, void *out_target) {
+void _list_pop(list_t *list, size_t index, void *out_target) {
   if (index >= list->size)
     eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
 
