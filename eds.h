@@ -26,56 +26,17 @@ typedef struct list list_t;
 
 #define list_of_type(list, type) _list_of_type(list, #type)
 
-#define list_get_as(list, index, type) \
+#define list_get(type, list, index) \
   (list_assert_type(list, type, "get"), (*(type *)list_at((list), (index))))
 
-#define list_set_unchecked(list, index, data) \
-  do {                                        \
-    typeof((data)) lvalue = (data);           \
-    _list_set((list), (index), &lvalue);      \
-  } while (0)
+#define list_set(type, list, index, data) \
+  (list_assert_type(list, type, "set"), _list_set(list, index, &(type){data}))
 
-#define list_set_checked(list, index, data, type) \
-  do {                                            \
-    list_assert_type(list, type, "set");          \
-    type lvalue = (data);                         \
-    _list_set((list), (index), &lvalue);          \
-  } while (0)
+#define list_append(type, list, data) \
+  (list_assert_type(list, type, "set"), _list_append(list, &(type){data}))
 
-#define EDS_SET_MACRO(_1, _2, _3, _4, name, ...) name
-#define list_set(...) EDS_SET_MACRO(__VA_ARGS__, list_set_checked, list_set_unchecked)(__VA_ARGS__)
-
-#define list_append_unchecked(list, data) \
-  do {                                    \
-    typeof((data)) lvalue = (data);       \
-    _list_append((list), &lvalue);        \
-  } while (0)
-
-#define list_append_checked(list, data, type) \
-  do {                                        \
-    list_assert_type(list, type, "append");   \
-    type lvalue = (data);                     \
-    _list_append((list), &lvalue);            \
-  } while (0)
-
-#define EDS_APPEND_MACRO(_1, _2, _3, name, ...) name
-#define list_append(...) EDS_APPEND_MACRO(__VA_ARGS__, list_append_checked, list_append_unchecked)(__VA_ARGS__)
-
-#define list_insert_unchecked(list, index, data) \
-  do {                                           \
-    typeof((data)) lvalue = (data);              \
-    _list_insert((list), index, &lvalue);        \
-  } while (0)
-
-#define list_insert_checked(list, index, data, type) \
-  do {                                               \
-    list_assert_type(list, type, "insert");          \
-    type lvalue = (data);                            \
-    _list_insert((list), index, &lvalue);            \
-  } while (0)
-
-#define EDS_INSERT_MACRO(_1, _2, _3, _4, name, ...) name
-#define list_insert(...) EDS_INSERT_MACRO(__VA_ARGS__, list_insert_checked, list_insert_unchecked)(__VA_ARGS__)
+#define list_insert(type, list, index, data) \
+  (list_assert_type(list, type, "set"), _list_insert(list, index, &(type){data}))
 
 #define list_clear(list) list_set_size(list, 0)
 #define list_trim(list) list_set_capacity(list, list_size(list))
