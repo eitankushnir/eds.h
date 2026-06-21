@@ -41,7 +41,7 @@ typedef struct list list_t;
 #define list_clear(list) list_set_size(list, 0)
 #define list_trim(list) list_set_capacity(list, list_size(list))
 
-#define list_foreach(list, type, item)                                                   \
+#define list_foreach(type, list, item)                                                   \
   for (size_t EDS_ITERATOR = (list_assert_type(list, type, "foreach"), 0), EDS_KEEP = 1; \
        EDS_KEEP && EDS_ITERATOR < list_size(list);                                       \
        EDS_KEEP = !EDS_KEEP, EDS_ITERATOR++)                                             \
