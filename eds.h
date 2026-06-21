@@ -45,7 +45,7 @@ typedef struct list list_t;
   for (size_t EDS_ITERATOR = (list_assert_type(list, type, "foreach"), 0), EDS_KEEP = 1; \
        EDS_KEEP && EDS_ITERATOR < list_size(list);                                       \
        EDS_KEEP = !EDS_KEEP, EDS_ITERATOR++)                                             \
-    for (type item = list_get_as(list, EDS_ITERATOR, type); EDS_KEEP; EDS_KEEP = !EDS_KEEP)
+    for (type item = list_get(type, list, EDS_ITERATOR); EDS_KEEP; EDS_KEEP = !EDS_KEEP)
 
 size_t list_size(list_t *list);
 size_t list_capacity(list_t *list);
