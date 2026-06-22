@@ -1,10 +1,6 @@
 #ifndef EDS__H
 #define EDS__H
-#include <inttypes.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define EDS_IS_POINTER_TO(var, type) _Generic((var), typeof(type) *: 1, default: 0)
 
@@ -185,12 +181,48 @@ void hashmap_clear(hashmap_t *hashmap);
 bool _hashmap_contains(hashmap_t *hashmap, void *key);
 #endif // EDS_NO_HASHMAP
 
+#ifndef EDS_NO_STRINGS
+
+typedef char *estr_t;
+struct estr_header {
+  size_t capacity;
+  size_t length;
+};
+
+#define EDS_ESTR_INITIAL_CAPACITY 16
+
+struct estr_header *_estr_header(estr_t str);
+size_t estr_len(estr_t str);
+size_t estr_cap(estr_t str);
+
+estr_t estr_copy(estr_t dest, const char *src);
+estr_t estr_copy_estr(estr_t dest, estr_t src);
+
+estr_t estr_cat(estr_t dest, const char *src);
+estr_t estr_catf(estr_t dest, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
+estr_t estr_cat_estr(estr_t dest, estr_t src);
+
+estr_t estr_setlen(estr_t str, size_t len);
+void _estr_setlen(estr_t str, size_t len);
+estr_t estr_setcap(estr_t str, size_t cap);
+
+estr_t estr_create_empty(size_t capacity);
+estr_t estr(const char *content);
+#define estr_empty estr_create_empty(EDS_ESTR_INITIAL_CAPACITY)
+
+#define estr_free(str) free(_estr_header(str))
+
+#endif // EDS_NO_STRINGS
 #endif
 
 #define EDS_IMPLEMENTATION
 #ifdef EDS_IMPLEMENTATION
 
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void eds_error(char *format, ...) {
   va_list vargs;
@@ -789,5 +821,121 @@ bool _hashmap_contains(hashmap_t *hashmap, void *key) {
   return false;
 }
 #endif // EDS_NO_HASHMAP
+
+#ifndef EDS_NO_STRING
+
+struct estr_header *_estr_header(estr_t str) {
+  return ((struct estr_header *)str - 1);
+}
+
+size_t estr_len(estr_t str) {
+  return _estr_header(str)->length;
+}
+size_t estr_cap(estr_t str) {
+  return _estr_header(str)->capacity;
+}
+
+estr_t estr_create_empty(size_t capacity) {
+  struct estr_header *header = eds_malloc(sizeof(char) * (capacity + 1) + sizeof(struct estr_header));
+  header->capacity = capacity;
+  header->length = 0;
+
+  estr_t str = (estr_t)(header + 1);
+  str[0] = '\0';
+  return str;
+}
+
+estr_t estr(const char *orig) {
+  size_t len = strlen(orig);
+  struct estr_header *header = eds_malloc(sizeof(char) * (len + 1) + sizeof(struct estr_header));
+  header->capacity = len;
+  header->length = len;
+
+  estr_t str = (estr_t)(header + 1);
+  memcpy(str, orig, len + 1);
+  return str;
+}
+
+estr_t estr_copy(estr_t dest, const char *src) {
+  size_t srclen = strlen(src);
+  if (estr_cap(dest) < srclen)
+    dest = estr_setcap(dest, srclen);
+
+  memcpy(dest, src, srclen + 1);
+  return dest;
+}
+
+estr_t estr_copy_estr(estr_t dest, estr_t src) {
+  size_t srclen = estr_len(src);
+  if (estr_cap(dest) < srclen)
+    dest = estr_setcap(dest, srclen);
+
+  memcpy(dest, src, srclen + 1);
+  return dest;
+}
+
+estr_t estr_cat(estr_t dest, const char *src) {
+  size_t srclen = strlen(src);
+  if (estr_cap(dest) < srclen + estr_len(dest))
+    dest = estr_setcap(dest, srclen + estr_len(dest));
+
+  memcpy(dest + estr_len(dest), src, srclen + 1);
+  return dest;
+}
+
+estr_t estr_catf(estr_t dest, const char *fmt, ...) {
+  va_list vargs;
+  va_start(vargs);
+  size_t len = vsnprintf(NULL, 0, fmt, vargs);
+  va_end(vargs);
+
+  if (estr_cap(dest) <= estr_len(dest) + len)
+    dest = estr_setcap(dest, estr_len(dest) + len);
+
+  va_start(vargs);
+  vsnprintf(dest + estr_len(dest), len, fmt, vargs);
+  dest[estr_len(dest) + len] = '\0';
+  va_end(vargs);
+
+  return dest;
+}
+
+estr_t estr_cat_estr(estr_t dest, estr_t src) {
+  size_t srclen = estr_len(src);
+  if (estr_cap(dest) < srclen + estr_len(dest))
+    dest = estr_setcap(dest, srclen + estr_len(dest));
+
+  memcpy(dest + estr_len(dest), src, srclen + 1);
+  return dest;
+}
+
+estr_t estr_setlen(estr_t str, size_t len) {
+  if (len > estr_len(str))
+    eds_error("Cannot use estr_setlen with length %zu which is larger than list length %zu. \nTo extend the string use estr_setcap.", len, estr_len(str));
+
+  str[len] = '\0';
+  return str;
+}
+
+void _estr_setlen(estr_t str, size_t len) {
+  _estr_header(str)->length = len;
+}
+estr_t estr_setcap(estr_t str, size_t cap) {
+  if (!cap)
+    eds_error("Cannot set estr capacity to 0");
+
+  struct estr_header *header = _estr_header(str);
+  header = eds_realloc(header, sizeof(struct estr_header) + sizeof(char) * (cap + 1));
+  header->capacity = cap;
+  if (cap <= header->length) {
+    header->length = cap;
+    *((char *)header + sizeof(struct estr_header) + cap) = '\0';
+  }
+
+  str = (estr_t)(header + 1);
+  return str;
+}
+
+#endif // EDS_NO_STRING
 
 #endif // EDS_IMPLEMENTATION
