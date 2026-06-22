@@ -209,6 +209,8 @@ estr_t estr_setcap(estr_t str, size_t cap);
 
 estr_t estr_create_empty(size_t capacity);
 estr_t estr(const char *content);
+estr_t estrf(const char *fmt, ...)
+    __attribute__((format(printf, 1, 2)));
 #define estr_empty estr_create_empty(EDS_ESTR_INITIAL_CAPACITY)
 
 #define estr_free(str) free(_estr_header(str))
@@ -856,6 +858,23 @@ estr_t estr(const char *orig) {
   return str;
 }
 
+estr_t estrf(const char *fmt, ...) {
+  va_list vargs;
+  va_start(vargs);
+  size_t len = vsnprintf(NULL, 0, fmt, vargs);
+  va_end(vargs);
+
+  struct estr_header *header = eds_malloc(sizeof(char) * (len + 1) + sizeof(struct estr_header));
+  header->capacity = len;
+  header->length = len;
+  va_start(vargs);
+  estr_t str = (estr_t)(header + 1);
+  vsnprintf(str, len + 1, fmt, vargs);
+  va_end(vargs);
+
+  return str;
+}
+
 estr_t estr_copy(estr_t dest, const char *src) {
   size_t srclen = strlen(src);
   if (estr_cap(dest) < srclen)
@@ -893,7 +912,7 @@ estr_t estr_catf(estr_t dest, const char *fmt, ...) {
     dest = estr_setcap(dest, estr_len(dest) + len);
 
   va_start(vargs);
-  vsnprintf(dest + estr_len(dest), len, fmt, vargs);
+  vsnprintf(dest + estr_len(dest), len + 1, fmt, vargs);
   dest[estr_len(dest) + len] = '\0';
   va_end(vargs);
 
