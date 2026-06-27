@@ -14,7 +14,7 @@
 #ifndef EDS_NO_LIST
 #define EDS_LIST_INITIAL_CAPACITY 10
 
-typedef struct list list_t;
+typedef struct list *list_t;
 
 #define list(type) _list_create(EDS_LIST_INITIAL_CAPACITY, sizeof(type), NULL, #type)
 #define list_with_capacity(type, capacity) _list_create((capacity), sizeof(type), NULL, #type)
@@ -56,31 +56,31 @@ typedef struct list list_t;
        EDS_KEEP = !EDS_KEEP, EDS_ITERATOR++)                                             \
     for (type item = list_get(type, list, EDS_ITERATOR); EDS_KEEP; EDS_KEEP = !EDS_KEEP)
 
-size_t list_size(list_t *list);
-size_t list_capacity(list_t *list);
-bool list_is_empty(list_t *list);
+size_t list_size(list_t list);
+size_t list_capacity(list_t list);
+bool list_is_empty(list_t list);
 
-void list_set_size(list_t *list, size_t size);
-void list_set_capacity(list_t *list, size_t capacity);
+void list_set_size(list_t list, size_t size);
+void list_set_capacity(list_t list, size_t capacity);
 
-void *list_at(list_t *list, size_t index);
-void _list_set(list_t *list, size_t index, void *data);
-void _list_append(list_t *list, void *data);
-void _list_insert(list_t *list, size_t index, void *data);
+void *list_at(list_t list, size_t index);
+void _list_set(list_t list, size_t index, void *data);
+void _list_append(list_t list, void *data);
+void _list_insert(list_t list, size_t index, void *data);
 
-void list_remove(list_t *list, size_t index);
-void _list_pop(list_t *list, size_t index, void *out_target);
+void list_remove(list_t list, size_t index);
+void _list_pop(list_t list, size_t index, void *out_target);
 
-list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), const char *type_name);
-void _list_destroy(list_t **list);
+list_t _list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), const char *type_name);
+void _list_destroy(list_t *list);
 
-void _list_assert_type(list_t *list, char *check, char *action);
+void _list_assert_type(list_t list, char *check, char *action);
 
 #endif // EDS_NO_LIST
 
 #ifndef EDS_NO_HASHMAP
 
-typedef struct hashmap hashmap_t;
+typedef struct hashmap *hashmap_t;
 #define EDS_HASHMAP_INITIAL_CAPACITY 8
 #define EDS_HASHMAP_LOAD_FACTOR 0.6f
 
@@ -138,7 +138,7 @@ typedef struct hashmap hashmap_t;
 #define strmap_contains(StrMap, Key) \
   (strmap_assert_strmap(StrMap, "contains"), _hashmap_contains(StrMap, &(char *){Key}))
 
-hashmap_t *_hashmap_create(
+hashmap_t _hashmap_create(
     size_t capacity,
     size_t key_size,
     size_t val_size,
@@ -148,38 +148,38 @@ hashmap_t *_hashmap_create(
     size_t (*hash_fn)(const void *, size_t),
     float load_factor);
 
-void hashmap_set_key_free_fn(hashmap_t *hashmap, void (*key_free_fn)(void *));
+void hashmap_set_key_free_fn(hashmap_t hashmap, void (*key_free_fn)(void *));
 #define strmap_set_key_free_fn(strmap, free_fn) hashmap_set_key_free_fn(strmap, free_fn)
-void hashmap_set_val_free_fn(hashmap_t *hashmap, void (*val_free_fn)(void *));
+void hashmap_set_val_free_fn(hashmap_t hashmap, void (*val_free_fn)(void *));
 #define strmap_set_val_free_fn(strmap, free_fn) hashmap_set_val_free_fn(strmap, free_fn)
 
-void _hashmap_destroy(hashmap_t **hashmap);
+void _hashmap_destroy(hashmap_t *hashmap);
 
-size_t hashmap_capacity(hashmap_t *hashmap);
+size_t hashmap_capacity(hashmap_t hashmap);
 #define strmap_capacity(strmap) hashmap_capacity(strmap)
 
-size_t hashmap_size(hashmap_t *hashmap);
+size_t hashmap_size(hashmap_t hashmap);
 #define strmap_size(strmap) hashmap_size(strmap)
 
-void _hashmap_grow(hashmap_t *hashmap);
-void _hashmap_set(hashmap_t *hashmap, void *key, void *value);
+void _hashmap_grow(hashmap_t hashmap);
+void _hashmap_set(hashmap_t hashmap, void *key, void *value);
 
-bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target);
+bool _hashmap_get(hashmap_t hashmap, void *key, void *out_target);
 
-bool _hashmap_remove(hashmap_t *hashmap, void *key);
-bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target);
+bool _hashmap_remove(hashmap_t hashmap, void *key);
+bool _hashmap_pop(hashmap_t hashmap, void *key, void *out_target);
 
-void _hashmap_assert_type(hashmap_t *hashmap, const char *key_name, const char *val_name, const char *action);
-void _hashmap_assert_val_type(hashmap_t *hashmap, const char *val_name, const char *action);
-void _hashmap_assert_key_type(hashmap_t *hashmap, const char *key_name, const char *action);
+void _hashmap_assert_type(hashmap_t hashmap, const char *key_name, const char *val_name, const char *action);
+void _hashmap_assert_val_type(hashmap_t hashmap, const char *val_name, const char *action);
+void _hashmap_assert_key_type(hashmap_t hashmap, const char *key_name, const char *action);
 
-void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *action);
-void _strmap_assert_strmap(hashmap_t *hashmap, const char *action);
+void _strmap_assert_type(hashmap_t hashmap, const char *val_name, const char *action);
+void _strmap_assert_strmap(hashmap_t hashmap, const char *action);
 
-void hashmap_clear(hashmap_t *hashmap);
+void hashmap_clear(hashmap_t hashmap);
 #define strmap_clear(strmap) hashmap_clear(strmap)
 
-bool _hashmap_contains(hashmap_t *hashmap, void *key);
+bool _hashmap_contains(hashmap_t hashmap, void *key);
 #endif // EDS_NO_HASHMAP
 
 #ifndef EDS_NO_STRINGS
@@ -216,7 +216,7 @@ estr_t estrf(const char *fmt, ...)
 
 #ifndef EDS_NO_QUEUE
 
-typedef struct queue queue_t;
+typedef struct queue *queue_t;
 #define EDS_QUEUE_INITIAL_CAPACITY 8
 #define queue_isempty(q) queue_size(q) == 0
 
@@ -241,15 +241,15 @@ typedef struct queue queue_t;
   (queue_assert_type(queue, type, "dequeue"), \
    EDS_ASSERT_POINTER_TO(target, type, "queue_dequeue target pointer does not point to a value of " #type), _queue_dequeue(queue, target))
 
-queue_t *_queue_create(size_t capacity, size_t data_size, const char *type_name);
-void _queue_enqueue(queue_t *q, void *data);
-void _queue_dequeue(queue_t *q, void *out_target);
-void queue_set_capacity(queue_t *q, size_t capacity);
-void *_queue_peek(queue_t *q);
-size_t queue_size(queue_t *q);
+queue_t _queue_create(size_t capacity, size_t data_size, const char *type_name);
+void _queue_enqueue(queue_t q, void *data);
+void _queue_dequeue(queue_t q, void *out_target);
+void queue_set_capacity(queue_t q, size_t capacity);
+void *_queue_peek(queue_t q);
+size_t queue_size(queue_t q);
 
-void _queue_destroy(queue_t **qptr);
-void _queue_assert_type(queue_t *q, char *check, char *action);
+void _queue_destroy(queue_t *qptr);
+void _queue_assert_type(queue_t q, char *check, char *action);
 
 #endif // EDS_NO_QUEUE
 #endif
@@ -304,11 +304,11 @@ struct list {
   void (*free_fn)(void *);
 };
 
-list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), const char *type_name) {
+list_t _list_create(size_t capacity, size_t data_size, void (*free_fn)(void *), const char *type_name) {
   if (!capacity) {
     eds_error("list_t cannot have 0 capacity");
   }
-  list_t *list = eds_malloc(sizeof(list_t));
+  list_t list = eds_malloc(sizeof(list_t));
   list->capacity = capacity;
   list->size = 0;
   list->data_size = data_size;
@@ -318,8 +318,8 @@ list_t *_list_create(size_t capacity, size_t data_size, void (*free_fn)(void *),
   return list;
 }
 
-void _list_destroy(list_t **listptr) {
-  list_t *l = *listptr;
+void _list_destroy(list_t *listptr) {
+  list_t l = *listptr;
   if (!l)
     return;
 
@@ -336,31 +336,31 @@ void _list_destroy(list_t **listptr) {
   *listptr = NULL;
 }
 
-size_t list_size(list_t *list) {
+size_t list_size(list_t list) {
   return list->size;
 }
-size_t list_capacity(list_t *list) {
+size_t list_capacity(list_t list) {
   return list->capacity;
 }
-bool list_is_empty(list_t *list) {
+bool list_is_empty(list_t list) {
   return list->size == 0;
 }
 
-void *list_at(list_t *list, size_t index) {
+void *list_at(list_t list, size_t index) {
   if (index >= list->size)
     eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
 
   return (char *)list->data + list->data_size * index;
 }
 
-void _list_set(list_t *list, size_t index, void *data) {
+void _list_set(list_t list, size_t index, void *data) {
   if (index >= list->size)
     eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
 
   memcpy((char *)list->data + index * list->data_size, data, list->data_size);
 }
 
-void _list_append(list_t *list, void *data) {
+void _list_append(list_t list, void *data) {
   if (list->size >= list->capacity) {
     list->data = eds_realloc(list->data, list->data_size * list->capacity * 2);
     list->capacity *= 2;
@@ -370,7 +370,7 @@ void _list_append(list_t *list, void *data) {
   list->size++;
 }
 
-void _list_assert_type(list_t *list, char *check, char *action) {
+void _list_assert_type(list_t list, char *check, char *action) {
   if (strcmp(check, list->type_name) != 0) {
     if (action)
       eds_error("Type mismatch. Trying to use %s with type %s on list of type %s.", action, check, list->type_name);
@@ -379,7 +379,7 @@ void _list_assert_type(list_t *list, char *check, char *action) {
   }
 }
 
-void list_remove(list_t *list, size_t index) {
+void list_remove(list_t list, size_t index) {
   if (index >= list->size)
     eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
 
@@ -396,7 +396,7 @@ void list_remove(list_t *list, size_t index) {
   list->size--;
 }
 
-void _list_pop(list_t *list, size_t index, void *out_target) {
+void _list_pop(list_t list, size_t index, void *out_target) {
   if (index >= list->size)
     eds_error("Index %zu is out of bounds in list of size %zu.", index, list->size);
 
@@ -412,7 +412,7 @@ void _list_pop(list_t *list, size_t index, void *out_target) {
   list->size--;
 }
 
-void _list_insert(list_t *list, size_t index, void *data) {
+void _list_insert(list_t list, size_t index, void *data) {
   if (index == list->size) {
     _list_append(list, data);
     return;
@@ -436,7 +436,7 @@ void _list_insert(list_t *list, size_t index, void *data) {
   list->size++;
 }
 
-void list_set_size(list_t *list, size_t size) {
+void list_set_size(list_t list, size_t size) {
   if (size > list->size)
     eds_error("Cannot use list_set_size with size %zu which is larger than list size %zu. \nTo extend the list use list_set_capacity.", size, list->size);
 
@@ -453,7 +453,7 @@ void list_set_size(list_t *list, size_t size) {
   list->size = size;
 }
 
-void list_set_capacity(list_t *list, size_t capacity) {
+void list_set_capacity(list_t list, size_t capacity) {
   if (capacity == 0) {
     free(list->data);
     list->data = NULL;
@@ -475,7 +475,7 @@ void list_set_capacity(list_t *list, size_t capacity) {
   list->capacity = capacity;
 }
 
-bool _list_of_type(list_t *l, char *type_name) {
+bool _list_of_type(list_t l, char *type_name) {
   return strcmp(l->type_name, type_name) == 0;
 }
 #endif // EDS_NO_LIST
@@ -536,7 +536,7 @@ struct hashmap {
   float load_factor;
 };
 
-hashmap_t *_hashmap_create(
+hashmap_t _hashmap_create(
     size_t capacity,
     size_t key_size,
     size_t val_size,
@@ -546,7 +546,7 @@ hashmap_t *_hashmap_create(
     size_t (*hash_fn)(const void *, size_t),
     float load_factor) {
 
-  hashmap_t *hm = eds_malloc(sizeof(hashmap_t));
+  hashmap_t hm = eds_malloc(sizeof(hashmap_t));
   hm->keys = eds_malloc(key_size * capacity);
   hm->key_size = key_size;
   hm->key_free_fn = NULL;
@@ -570,15 +570,15 @@ hashmap_t *_hashmap_create(
   return hm;
 }
 
-void hashmap_set_key_free_fn(hashmap_t *hashmap, void (*key_free_fn)(void *)) {
+void hashmap_set_key_free_fn(hashmap_t hashmap, void (*key_free_fn)(void *)) {
   hashmap->key_free_fn = key_free_fn;
 }
-void hashmap_set_val_free_fn(hashmap_t *hashmap, void (*val_free_fn)(void *)) {
+void hashmap_set_val_free_fn(hashmap_t hashmap, void (*val_free_fn)(void *)) {
   hashmap->val_free_fn = val_free_fn;
 }
 
-void _hashmap_destroy(hashmap_t **hashmap) {
-  hashmap_t *hm = *hashmap;
+void _hashmap_destroy(hashmap_t *hashmap) {
+  hashmap_t hm = *hashmap;
   if (!hm)
     return;
 
@@ -603,14 +603,14 @@ void _hashmap_destroy(hashmap_t **hashmap) {
   *hashmap = NULL;
 }
 
-size_t hashmap_capacity(hashmap_t *hashmap) {
+size_t hashmap_capacity(hashmap_t hashmap) {
   return hashmap->capacity;
 }
-size_t hashmap_size(hashmap_t *hashmap) {
+size_t hashmap_size(hashmap_t hashmap) {
   return hashmap->size;
 }
 
-void _hashmap_grow(hashmap_t *hashmap) {
+void _hashmap_grow(hashmap_t hashmap) {
   size_t cap = hashmap->capacity;
   size_t new_cap = hashmap->capacity * 2;
 
@@ -647,7 +647,7 @@ void _hashmap_grow(hashmap_t *hashmap) {
   hashmap->capacity = new_cap;
 }
 
-void _hashmap_set(hashmap_t *hashmap, void *key, void *value) {
+void _hashmap_set(hashmap_t hashmap, void *key, void *value) {
   if (hashmap->size >= hashmap->capacity * hashmap->load_factor) {
     _hashmap_grow(hashmap);
   }
@@ -673,7 +673,7 @@ void _hashmap_set(hashmap_t *hashmap, void *key, void *value) {
   }
 }
 
-bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target) {
+bool _hashmap_get(hashmap_t hashmap, void *key, void *out_target) {
   size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
 
   for (size_t i = idx; i < hashmap->capacity; i++) {
@@ -694,7 +694,7 @@ bool _hashmap_get(hashmap_t *hashmap, void *key, void *out_target) {
   return false;
 }
 
-bool _hashmap_remove(hashmap_t *hashmap, void *key) {
+bool _hashmap_remove(hashmap_t hashmap, void *key) {
   size_t hash = hashmap->hash_fn(key, hashmap->key_size);
 
   for (size_t i = 0; i < hashmap->capacity; i++) {
@@ -722,7 +722,7 @@ bool _hashmap_remove(hashmap_t *hashmap, void *key) {
   return false;
 }
 
-bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
+bool _hashmap_pop(hashmap_t hashmap, void *key, void *out_target) {
   size_t hash = hashmap->hash_fn(key, hashmap->key_size);
 
   for (size_t i = 0; i < hashmap->capacity; i++) {
@@ -750,7 +750,7 @@ bool _hashmap_pop(hashmap_t *hashmap, void *key, void *out_target) {
   return false;
 }
 
-void _hashmap_assert_type(hashmap_t *hashmap, const char *key_name, const char *val_name, const char *action) {
+void _hashmap_assert_type(hashmap_t hashmap, const char *key_name, const char *val_name, const char *action) {
   if (strcmp(key_name, hashmap->key_name) != 0 || strcmp(val_name, hashmap->val_name) != 0) {
     if (action) {
       eds_error("Type mismatch. Trying to use %s with type (%s, %s) on hashmap of type (%s, %s).",
@@ -765,7 +765,7 @@ void _hashmap_assert_type(hashmap_t *hashmap, const char *key_name, const char *
   }
 }
 
-void _hashmap_assert_key_type(hashmap_t *hashmap, const char *key_name, const char *action) {
+void _hashmap_assert_key_type(hashmap_t hashmap, const char *key_name, const char *action) {
   if (strcmp(key_name, hashmap->key_name) != 0) {
     if (action) {
       eds_error("Type mismatch. Trying to use %s with key type '%s' on hashmap with key type '%s'.",
@@ -780,7 +780,7 @@ void _hashmap_assert_key_type(hashmap_t *hashmap, const char *key_name, const ch
   }
 }
 
-void _hashmap_assert_val_type(hashmap_t *hashmap, const char *val_name, const char *action) {
+void _hashmap_assert_val_type(hashmap_t hashmap, const char *val_name, const char *action) {
   if (strcmp(val_name, hashmap->val_name) != 0) {
     if (action) {
       eds_error("Type mismatch. Trying to use %s with value type '%s' on hashmap with value type '%s'.",
@@ -795,7 +795,7 @@ void _hashmap_assert_val_type(hashmap_t *hashmap, const char *val_name, const ch
   }
 }
 
-void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *action) {
+void _strmap_assert_type(hashmap_t hashmap, const char *val_name, const char *action) {
   bool is_strmap = hashmap->cmp_fn == _eds_cmp_str;
   bool correct_value = strcmp(val_name, hashmap->val_name) == 0;
   if (is_strmap && !correct_value) {
@@ -812,7 +812,7 @@ void _strmap_assert_type(hashmap_t *hashmap, const char *val_name, const char *a
   }
 }
 
-void _strmap_assert_strmap(hashmap_t *hashmap, const char *action) {
+void _strmap_assert_strmap(hashmap_t hashmap, const char *action) {
   bool is_strmap = hashmap->cmp_fn == _eds_cmp_str;
   if (!is_strmap) {
     if (action) {
@@ -826,7 +826,7 @@ void _strmap_assert_strmap(hashmap_t *hashmap, const char *action) {
   }
 }
 
-void hashmap_clear(hashmap_t *hashmap) {
+void hashmap_clear(hashmap_t hashmap) {
   for (size_t i = 0; i < hashmap->capacity; i++) {
     if (hashmap->states[i] == 1) {
       void *key = (char *)hashmap->keys + i * hashmap->key_size;
@@ -842,7 +842,7 @@ void hashmap_clear(hashmap_t *hashmap) {
   hashmap->size = 0;
 }
 
-bool _hashmap_contains(hashmap_t *hashmap, void *key) {
+bool _hashmap_contains(hashmap_t hashmap, void *key) {
   size_t idx = hashmap->hash_fn(key, hashmap->key_size) & (hashmap->capacity - 1);
 
   for (size_t i = idx; i < hashmap->capacity; i++) {
@@ -1011,8 +1011,8 @@ struct queue {
   const char *type_name;
 };
 
-queue_t *_queue_create(size_t capacity, size_t data_size, const char *type_name) {
-  queue_t *q = eds_malloc(sizeof(queue_t));
+queue_t _queue_create(size_t capacity, size_t data_size, const char *type_name) {
+  queue_t q = eds_malloc(sizeof(queue_t));
   q->data = eds_malloc(data_size * capacity);
   q->data_size = data_size;
   q->capacity = capacity;
@@ -1025,7 +1025,7 @@ queue_t *_queue_create(size_t capacity, size_t data_size, const char *type_name)
   return q;
 }
 
-void queue_set_capacity(queue_t *q, size_t capacity) {
+void queue_set_capacity(queue_t q, size_t capacity) {
   if (capacity < q->size)
     eds_error("Cannot set queue capacity to %zu: lower than queue size %zu", capacity, q->size);
 
@@ -1050,7 +1050,7 @@ void queue_set_capacity(queue_t *q, size_t capacity) {
   q->end_index = q->size;
 }
 
-void _queue_enqueue(queue_t *q, void *data) {
+void _queue_enqueue(queue_t q, void *data) {
   if (q->size >= q->capacity)
     queue_set_capacity(q, q->capacity * 2);
 
@@ -1059,7 +1059,7 @@ void _queue_enqueue(queue_t *q, void *data) {
   q->end_index = (q->end_index + 1) % q->capacity;
 }
 
-void _queue_dequeue(queue_t *q, void *out_target) {
+void _queue_dequeue(queue_t q, void *out_target) {
   if (q->size == 0)
     eds_error("Cannot dequeue from an empty queue.");
 
@@ -1068,17 +1068,17 @@ void _queue_dequeue(queue_t *q, void *out_target) {
   q->head_index = (q->head_index + 1) % q->capacity;
 }
 
-void *_queue_peek(queue_t *q) {
+void *_queue_peek(queue_t q) {
   if (q->size == 0)
     eds_error("Cannot peek into an empty queue.");
   return (char *)q->data + q->data_size * q->head_index;
 }
-size_t queue_size(queue_t *q) {
+size_t queue_size(queue_t q) {
   return q->size;
 }
 
-void _queue_destroy(queue_t **qptr) {
-  queue_t *q = *qptr;
+void _queue_destroy(queue_t *qptr) {
+  queue_t q = *qptr;
   if (!q)
     return;
 
@@ -1087,7 +1087,7 @@ void _queue_destroy(queue_t **qptr) {
   *qptr = NULL;
 }
 
-void _queue_assert_type(queue_t *q, char *check, char *action) {
+void _queue_assert_type(queue_t q, char *check, char *action) {
   if (strcmp(check, q->type_name) != 0) {
     if (action)
       eds_error("Type mismatch. Trying to use %s with type %s on queue of type %s.", action, check, q->type_name);
