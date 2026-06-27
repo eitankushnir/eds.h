@@ -184,10 +184,6 @@ bool _hashmap_contains(hashmap_t *hashmap, void *key);
 #ifndef EDS_NO_STRINGS
 
 typedef char *estr_t;
-struct estr_header {
-  size_t capacity;
-  size_t length;
-};
 
 #define EDS_ESTR_INITIAL_CAPACITY 16
 
@@ -216,6 +212,45 @@ estr_t estrf(const char *fmt, ...)
 #define estr_free(str) free(_estr_header(str))
 
 #endif // EDS_NO_STRINGS
+
+#ifndef EDS_NO_QUEUE
+
+typedef struct queue queue_t;
+#define EDS_QUEUE_INITIAL_CAPACITY 8
+#define queue_isempty(q) queue_size(q) == 0
+
+#if defined(EDS_NO_CHECKS)
+#define queue_assert_type(queue, type, action) ((void)0)
+#else
+#define queue_assert_type(queue, type, action) _queue_assert_type(queue, #type, action)
+#endif
+
+#define queue(type) _queue_create(EDS_QUEUE_INITIAL_CAPACITY, sizeof(type), #type)
+#define queue_with_capacity(type, capacity) _queue_create(capacity, sizeof(type), #type)
+
+#define queue_destroy(queue) _queue_destroy(&(queue))
+
+#define queue_peek(type, queue) \
+  (queue_assert_type(queue, type, "peek"), (*(type *)_queue_peek((queue))))
+
+#define queue_enqueue(type, queue, data) \
+  (queue_assert_type(queue, type, "enqueue"), _queue_enqueue(queue, &(type){data}))
+
+#define queue_dequeue(type, queue, target)    \
+  (queue_assert_type(queue, type, "dequeue"), \
+   EDS_ASSERT_POINTER_TO(target, type, "queue_dequeue target pointer does not point to a value of " #type), _queue_dequeue(queue, target))
+
+queue_t *_queue_create(size_t capacity, size_t data_size, const char *type_name);
+void _queue_enqueue(queue_t *q, void *data);
+void _queue_dequeue(queue_t *q, void *out_target);
+void queue_set_capacity(queue_t *q, size_t capacity);
+void *_queue_peek(queue_t *q);
+size_t queue_size(queue_t *q);
+
+void _queue_destroy(queue_t **qptr);
+void _queue_assert_type(queue_t *q, char *check, char *action);
+
+#endif // EDS_NO_QUEUE
 #endif
 
 #define EDS_IMPLEMENTATION
@@ -826,6 +861,11 @@ bool _hashmap_contains(hashmap_t *hashmap, void *key) {
 
 #ifndef EDS_NO_STRING
 
+struct estr_header {
+  size_t capacity;
+  size_t length;
+};
+
 struct estr_header *_estr_header(estr_t str) {
   return ((struct estr_header *)str - 1);
 }
@@ -956,5 +996,105 @@ estr_t estr_setcap(estr_t str, size_t cap) {
 }
 
 #endif // EDS_NO_STRING
+
+#ifndef EDS_NO_QUEUE
+
+struct queue {
+  void *data;
+  size_t size;
+  size_t capacity;
+  size_t data_size;
+  size_t head_index;
+  size_t end_index;
+
+  const char *type_name;
+};
+
+queue_t *_queue_create(size_t capacity, size_t data_size, const char *type_name) {
+  queue_t *q = eds_malloc(sizeof(queue_t));
+  q->data = eds_malloc(data_size * capacity);
+  q->data_size = data_size;
+  q->capacity = capacity;
+  q->head_index = 0;
+  q->end_index = 0;
+  q->size = 0;
+
+  q->type_name = type_name;
+
+  return q;
+}
+
+void queue_set_capacity(queue_t *q, size_t capacity) {
+  if (capacity < q->size)
+    eds_error("Cannot set queue capacity to %zu: lower than queue size %zu", capacity, q->size);
+
+  void *new_data = eds_malloc(q->data_size * capacity);
+  if (q->size > 0) {
+    size_t first_batch = q->capacity - q->head_index;
+    if (first_batch > q->size)
+      first_batch = q->size;
+
+    memcpy(new_data, (char *)q->data + q->data_size * q->head_index, q->data_size * first_batch);
+
+    if (q->size > first_batch) {
+      size_t second_batch = q->size - first_batch;
+      memcpy((char *)new_data + q->data_size * first_batch, q->data, q->data_size * second_batch);
+    }
+  }
+
+  free(q->data);
+  q->data = new_data;
+  q->capacity = capacity;
+  q->head_index = 0;
+  q->end_index = q->size;
+}
+
+void _queue_enqueue(queue_t *q, void *data) {
+  if (q->size >= q->capacity)
+    queue_set_capacity(q, q->capacity * 2);
+
+  memcpy((char *)q->data + q->data_size * q->end_index, data, q->data_size);
+  q->size++;
+  q->end_index = (q->end_index + 1) % q->capacity;
+}
+
+void _queue_dequeue(queue_t *q, void *out_target) {
+  if (q->size == 0)
+    eds_error("Cannot dequeue from an empty queue.");
+
+  memcpy(out_target, (char *)q->data + q->data_size * q->head_index, q->data_size);
+  q->size--;
+  q->head_index = (q->head_index + 1) % q->capacity;
+}
+
+void *_queue_peek(queue_t *q) {
+  if (q->size == 0)
+    eds_error("Cannot peek into an empty queue.");
+  return (char *)q->data + q->data_size * q->head_index;
+}
+size_t queue_size(queue_t *q) {
+  return q->size;
+}
+
+void _queue_destroy(queue_t **qptr) {
+  queue_t *q = *qptr;
+  if (!q)
+    return;
+
+  free(q->data);
+  free(q);
+  *qptr = NULL;
+}
+
+void _queue_assert_type(queue_t *q, char *check, char *action) {
+  if (strcmp(check, q->type_name) != 0) {
+    if (action)
+      eds_error("Type mismatch. Trying to use %s with type %s on queue of type %s.", action, check, q->type_name);
+    else
+      eds_error("Type mismatch. Queue of type %s does not match type %s.\n", q->type_name, check);
+  }
+}
+
+#endif // EDS_NO_QUEUE
 
 #endif // EDS_IMPLEMENTATION
