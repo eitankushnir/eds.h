@@ -47,7 +47,8 @@ typedef struct list list_t;
 #define list_trim(list) list_set_capacity(list, list_size(list))
 
 #define list_pop(type, list, index, target) \
-  (EDS_ASSERT_POINTER_TO(target, type, "list_pop target pointer does not point to a value of " #type), _list_pop(list, index, target))
+  (list_assert_type(list, type, "pop"),     \
+   EDS_ASSERT_POINTER_TO(target, type, "list_pop target pointer does not point to a value of " #type), _list_pop(list, index, target))
 
 #define list_foreach(type, list, item)                                                   \
   for (size_t EDS_ITERATOR = (list_assert_type(list, type, "foreach"), 0), EDS_KEEP = 1; \
